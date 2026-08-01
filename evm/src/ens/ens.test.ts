@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Effect, Exit, Layer } from "effect";
+import { Cause, Effect, Exit, Layer } from "effect";
 import type { Address } from "viem";
 import { EnsResolver, EnsResolverLive } from "#src/ens/index.js";
 import { makeMockPublicClientLayer, TEST_ADDRESS } from "#src/testing-kit/index.js";
@@ -37,7 +37,7 @@ describe("EnsResolver", () => {
         expect(Exit.isFailure(exit)).toBe(true);
         if (Exit.isFailure(exit)) {
           const cause = exit.cause;
-          expect(cause._tag).toBe("Fail");
+          expect(Cause.hasFails(cause)).toBe(true);
         }
       }).pipe(
         Effect.provide(

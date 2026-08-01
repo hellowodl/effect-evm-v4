@@ -1,5 +1,6 @@
-import { HttpClient, HttpClientRequest, HttpClientResponse } from "@effect/platform";
-import { Config, Effect, Schema } from "effect";
+import { Config, Effect, Option } from "effect";
+import type { HttpClientResponse } from "effect/unstable/http";
+import { HttpClient, HttpClientRequest } from "effect/unstable/http";
 import type { Address, Hex } from "viem";
 import {
   SimulationError,
@@ -7,7 +8,7 @@ import {
   TenderlyNotConfiguredError,
   TenderlyRateLimitError,
 } from "#src/simulation/index.js";
-import type { SimulationResult, StateOverride, TraceCall } from "#src/simulation/types.ts";
+import type { SimulationResult, StateOverride, TraceCall } from "#src/simulation/types.js";
 
 type TenderlySimulationRequest = {
   network_id: string;
@@ -95,15 +96,22 @@ type TenderlySimulationResponse = {
 };
 
 const getTenderlyConfig = Effect.gen(function* () {
-  const accessKey = yield* Config.string("TENDERLY_ACCESS_KEY").pipe(
-    Effect.catchAll(() => Effect.succeed(undefined))
+  const optional = yield* Config.all({
+    accessKey: Config.option(Config.string("TENDERLY_ACCESS_KEY")),
+    account: Config.option(Config.string("TENDERLY_ACCOUNT")),
+    project: Config.option(Config.string("TENDERLY_PROJECT")),
+  }).pipe(
+    Effect.mapError(
+      () =>
+        new TenderlyNotConfiguredError({
+          message: "Invalid Tenderly configuration",
+          missingConfig: [],
+        })
+    )
   );
-  const account = yield* Config.string("TENDERLY_ACCOUNT").pipe(
-    Effect.catchAll(() => Effect.succeed(undefined))
-  );
-  const project = yield* Config.string("TENDERLY_PROJECT").pipe(
-    Effect.catchAll(() => Effect.succeed(undefined))
-  );
+  const accessKey = Option.getOrUndefined(optional.accessKey);
+  const account = Option.getOrUndefined(optional.account);
+  const project = Option.getOrUndefined(optional.project);
 
   const missing: string[] = [];
   if (!accessKey) {
@@ -116,7 +124,7 @@ const getTenderlyConfig = Effect.gen(function* () {
     missing.push("TENDERLY_PROJECT");
   }
 
-  if (missing.length > 0) {
+  if (!accessKey || !account || !project) {
     return yield* Effect.fail(
       new TenderlyNotConfiguredError({
         message: `Missing Tenderly configuration: ${missing.join(", ")}`,
@@ -126,9 +134,9 @@ const getTenderlyConfig = Effect.gen(function* () {
   }
 
   return {
-    accessKey: accessKey as string,
-    account: account as string,
-    project: project as string,
+    accessKey,
+    account,
+    project,
   };
 });
 
@@ -270,7 +278,7 @@ function ensureTenderlyOk(response: HttpClientResponse.HttpClientResponse) {
     }
 
     if (response.status < 200 || response.status >= 300) {
-      const body = yield* response.json.pipe(Effect.catchAll(() => Effect.succeed(undefined)));
+      const body = yield* response.json.pipe(Effect.catch(() => Effect.succeed(undefined)));
       return yield* Effect.fail(
         new TenderlyApiError({
           message: "Tenderly API request failed",
@@ -324,7 +332,7 @@ export function simulateTenderly(params: {
 
     yield* ensureTenderlyOk(response);
 
-    const body = yield* HttpClientResponse.schemaBodyJson(Schema.Unknown)(response).pipe(
+    const body = yield* response.json.pipe(
       Effect.mapError(
         (cause) =>
           new SimulationError({

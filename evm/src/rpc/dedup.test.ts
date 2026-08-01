@@ -39,9 +39,15 @@ describe("RequestDedup", () => {
       });
 
       // Start three concurrent calls with the same key
-      const fiber1 = yield* Effect.fork(dedup.dedupe("concurrent-key", effect));
-      const fiber2 = yield* Effect.fork(dedup.dedupe("concurrent-key", effect));
-      const fiber3 = yield* Effect.fork(dedup.dedupe("concurrent-key", effect));
+      const fiber1 = yield* Effect.forkChild(dedup.dedupe("concurrent-key", effect), {
+        startImmediately: true,
+      });
+      const fiber2 = yield* Effect.forkChild(dedup.dedupe("concurrent-key", effect), {
+        startImmediately: true,
+      });
+      const fiber3 = yield* Effect.forkChild(dedup.dedupe("concurrent-key", effect), {
+        startImmediately: true,
+      });
 
       // Ensure at least one fiber has started the underlying effect before opening the gate
       yield* Deferred.await(started);
@@ -69,8 +75,8 @@ describe("RequestDedup", () => {
         return { data: 42, status: "success" };
       });
 
-      const fiber1 = yield* Effect.fork(dedup.dedupe("success-key", effect));
-      const fiber2 = yield* Effect.fork(dedup.dedupe("success-key", effect));
+      const fiber1 = yield* Effect.forkChild(dedup.dedupe("success-key", effect));
+      const fiber2 = yield* Effect.forkChild(dedup.dedupe("success-key", effect));
 
       yield* Deferred.succeed(deferred, undefined);
 
@@ -92,8 +98,8 @@ describe("RequestDedup", () => {
         return yield* Effect.fail(new Error("shared-error"));
       });
 
-      const fiber1 = yield* Effect.fork(dedup.dedupe("error-key", effect));
-      const fiber2 = yield* Effect.fork(dedup.dedupe("error-key", effect));
+      const fiber1 = yield* Effect.forkChild(dedup.dedupe("error-key", effect));
+      const fiber2 = yield* Effect.forkChild(dedup.dedupe("error-key", effect));
 
       yield* Deferred.succeed(deferred, undefined);
 
@@ -219,8 +225,8 @@ describe("RequestDedup", () => {
         return "text";
       });
 
-      const fiber1 = yield* Effect.fork(dedup.dedupe("num-key", numberEffect));
-      const fiber2 = yield* Effect.fork(dedup.dedupe("str-key", stringEffect));
+      const fiber1 = yield* Effect.forkChild(dedup.dedupe("num-key", numberEffect));
+      const fiber2 = yield* Effect.forkChild(dedup.dedupe("str-key", stringEffect));
 
       yield* Deferred.succeed(deferred, undefined);
 
@@ -245,10 +251,8 @@ describe("RequestDedup", () => {
       });
 
       // Start 10 concurrent calls
-      const fibers = yield* Effect.forEach(
-        Array.from({ length: 10 }, (_, i) => i),
-        () => Effect.fork(dedup.dedupe("many-key", effect)),
-        { concurrency: "unbounded" }
+      const fibers = yield* Effect.forEach(Array.from({ length: 10 }), () =>
+        Effect.forkChild(dedup.dedupe("many-key", effect), { startImmediately: true })
       );
 
       yield* Deferred.succeed(deferred, undefined);

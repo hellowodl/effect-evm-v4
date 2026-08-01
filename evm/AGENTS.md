@@ -1,4 +1,4 @@
-# @prb/effect-evm
+# effect-evm-v4
 
 ## References
 
@@ -15,8 +15,8 @@
 ## Setup
 
 ```bash
-git clone <your-fork-url> prb-effect
-cd prb-effect
+git clone https://github.com/hellowodl/effect-evm-v4.git
+cd effect-evm-v4
 bun install
 cd evm
 ```
@@ -25,7 +25,7 @@ cd evm
 
 ```bash
 just --list       # Show all package commands
-just build        # Build the package (clean, compile, pack)
+just build        # Build the package (clean and compile)
 just test         # Run all tests
 just test-ui      # Run tests in UI mode
 just full-check   # Run all checks (lint, format, types, etc.)
@@ -48,6 +48,6 @@ just type-check   # Type-check the package
 ## Project Conventions
 
 - Keep the public API intentional: avoid accidental exports; prefer exporting from `src/index.ts`.
-- Stick to Effect service patterns: `Context.Tag` for services, `Layer.*` for implementations.
-- Use typed errors (`Schema.TaggedError`) and `Effect.catchTag` in examples.
+- Stick to Effect service patterns: `Context.Service` for services, `Layer.*` for implementations.
+- Use typed errors (`Schema.TaggedErrorClass`) and `Effect.catchTag` in examples.
 - Prefer strict types; avoid `any` and use `unknown` when needed.

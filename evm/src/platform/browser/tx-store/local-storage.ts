@@ -1,4 +1,4 @@
-import { Effect, Layer, Option, Stream, SubscriptionRef } from "effect";
+import { Clock, Effect, Filter, Layer, Option, Stream, SubscriptionRef } from "effect";
 import { BrowserStorage } from "../storage/index.js";
 import type { TxStoreError } from "./errors.js";
 import { TxStore } from "./store.js";
@@ -115,7 +115,8 @@ function readTx(
       return tx;
     } catch {
       // Quarantine corrupt data
-      const quarantineKey = `${CORRUPT_KEY_PREFIX}${id}:${Date.now()}`;
+      const quarantinedAt = yield* Clock.currentTimeMillis;
+      const quarantineKey = `${CORRUPT_KEY_PREFIX}${id}:${quarantinedAt}`;
       yield* storage.set(quarantineKey, raw);
       yield* storage.remove(key);
       return null;
@@ -240,7 +241,10 @@ export const makeLocalStorageTxStoreLive = (
         SubscriptionRef.set(changesRef, Option.some(change));
 
       return TxStore.of({
-        changes: Stream.filterMap(changesRef.changes, (change) => change),
+        changes: Stream.filterMap(
+          SubscriptionRef.changes(changesRef),
+          Filter.fromPredicateOption((change) => change)
+        ),
 
         delete: (id: string) =>
           Effect.gen(function* () {
@@ -255,9 +259,10 @@ export const makeLocalStorageTxStoreLive = (
             yield* writeIndex(storage, newIndex);
 
             yield* refreshInFlight;
+            const at = yield* Clock.currentTimeMillis;
             yield* publishChange({
               _tag: "delete",
-              at: Date.now(),
+              at,
               id,
               previous,
             });
@@ -296,15 +301,16 @@ export const makeLocalStorageTxStoreLive = (
               inFlightRef,
               prunedTxs.filter((persistedTx) => isInFlightPersistedTx(persistedTx))
             );
+            const at = yield* Clock.currentTimeMillis;
             yield* publishChange({
               _tag: "upsert",
-              at: Date.now(),
+              at,
               next: tx,
               previous,
             });
           }),
 
-        watchInFlight: () => inFlightRef.changes,
+        watchInFlight: () => SubscriptionRef.changes(inFlightRef),
       });
     })
   );

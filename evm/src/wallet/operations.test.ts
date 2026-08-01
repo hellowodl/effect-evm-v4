@@ -74,7 +74,7 @@ describe("signMessage", () => {
 
       expect(Exit.isFailure(exit)).toBe(true);
       if (Exit.isFailure(exit)) {
-        const error = Cause.failureOption(exit.cause);
+        const error = Cause.findErrorOption(exit.cause);
         if (error._tag === "Some") {
           expect(error.value._tag).toBe("AccountNotConnectedError");
         }
@@ -100,7 +100,7 @@ describe("signMessage", () => {
 
       expect(Exit.isFailure(exit)).toBe(true);
       if (Exit.isFailure(exit)) {
-        const error = Cause.failureOption(exit.cause);
+        const error = Cause.findErrorOption(exit.cause);
         if (error._tag === "Some") {
           expect(error.value._tag).toBe("SignMessageError");
           expect(error.value.message).toBe("User rejected the request");
@@ -294,7 +294,7 @@ describe("signTypedData", () => {
 
       expect(Exit.isFailure(exit)).toBe(true);
       if (Exit.isFailure(exit)) {
-        const error = Cause.failureOption(exit.cause);
+        const error = Cause.findErrorOption(exit.cause);
         if (error._tag === "Some") {
           expect(error.value._tag).toBe("SignTypedDataError");
           expect(error.value.message).toBe("User rejected the request");
@@ -421,7 +421,7 @@ describe("signTransaction", () => {
 
       expect(Exit.isFailure(exit)).toBe(true);
       if (Exit.isFailure(exit)) {
-        const error = Cause.failureOption(exit.cause);
+        const error = Cause.findErrorOption(exit.cause);
         if (error._tag === "Some") {
           expect(error.value._tag).toBe("SignTxError");
           expect(error.value.message).toBe("User rejected the request");

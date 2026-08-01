@@ -35,7 +35,7 @@ describe("NonceService (Live)", () => {
 
         expect(Exit.isFailure(exit)).toBe(true);
         if (Exit.isFailure(exit)) {
-          const error = Cause.failureOption(exit.cause);
+          const error = Cause.findErrorOption(exit.cause);
           if (error._tag === "Some") {
             expect(error.value).toBeInstanceOf(ClientNotFoundError);
           }
@@ -89,27 +89,27 @@ describe("NonceService (Live)", () => {
           },
         });
 
-        const fibers = yield* Effect.gen(function* () {
+        const results = yield* Effect.gen(function* () {
           const service = yield* NonceService;
-          return yield* Effect.forEach(
+          const fibers = yield* Effect.forEach(
             Array.from({ length: concurrency }, () => null),
             () =>
-              Effect.fork(
+              Effect.forkChild(
                 service.reserve({
                   address: testAddress,
                   chainId: mainnet.id,
-                })
-              ),
-            { concurrency: "unbounded" }
+                }),
+                { startImmediately: true }
+              )
           );
+
+          yield* Effect.promise(() => ready);
+          resolveGo?.();
+
+          return yield* Effect.forEach(fibers, (fiber) => Fiber.join(fiber), {
+            concurrency: "unbounded",
+          });
         }).pipe(Effect.provide(layer));
-
-        yield* Effect.promise(() => ready);
-        resolveGo?.();
-
-        const results = yield* Effect.forEach(fibers, (fiber) => Fiber.join(fiber), {
-          concurrency: "unbounded",
-        });
 
         const uniq = new Set(results.map(String));
         expect(uniq.size).toBe(concurrency);

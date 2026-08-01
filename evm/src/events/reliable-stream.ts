@@ -1,4 +1,4 @@
-import { Cause, Context, Effect, Fiber, Layer, Ref, Schedule, Stream } from "effect";
+import { Cause, Context, Effect, Layer, Queue, Ref, Schedule, Stream } from "effect";
 import type { Abi, Address, Hash } from "viem";
 import { DEFAULT_POLLING_INTERVAL } from "#src/constants/index.js";
 import type { ClientNotFoundError } from "#src/core/index.js";
@@ -20,7 +20,6 @@ export type ReliableWatchParams<TAbi extends Abi, TEventName extends ContractEve
 
 type PendingEvent<TAbi extends Abi, TEventName extends string> = {
   event: DecodedEvent<TAbi, TEventName>;
-  receivedAt: number;
 };
 
 type EventKey = {
@@ -63,10 +62,10 @@ export type ReliableEventStreamShape = {
   >;
 };
 
-export class ReliableEventStream extends Context.Tag("ew3/ReliableEventStream")<
+export class ReliableEventStream extends Context.Service<
   ReliableEventStream,
   ReliableEventStreamShape
->() {}
+>()("ew3/ReliableEventStream") {}
 
 export const ReliableEventStreamLive = Layer.effect(
   ReliableEventStream,
@@ -85,8 +84,28 @@ export const ReliableEventStreamLive = Layer.effect(
         // Get base event stream
         const baseStream = yield* eventStream.watch(params);
 
-        return Stream.asyncScoped<DecodedEvent<TAbi, TEventName>, EventWatchError>((emit) =>
-          Effect.gen(function* () {
+        return Stream.callback<DecodedEvent<TAbi, TEventName>, EventWatchError>((queue) => {
+          // Map any terminal failure/defect from a callback fiber into the
+          // stream's error channel so consumers observe it instead of hanging.
+          // Interruption (normal stream shutdown) is intentionally ignored — it
+          // must not surface as a spurious failure.
+          const failStream = (cause: Cause.Cause<unknown>) => {
+            if (Cause.hasInterruptsOnly(cause)) {
+              return Effect.void;
+            }
+            return Queue.failCause(
+              queue,
+              Cause.fail(
+                new EventWatchError({
+                  cause: Cause.squash(cause),
+                  chainId: params.chainId,
+                  message: `Reliable event stream failed on chain ${params.chainId}`,
+                })
+              )
+            ).pipe(Effect.asVoid);
+          };
+
+          return Effect.gen(function* () {
             // State: map blockNumber -> array of pending events
             const stateRef = yield* Ref.make<ReliableState<TAbi, TEventName>>({
               locationByKey: new Map<string, bigint>(/* key format: "txHash-logIndex" */),
@@ -137,12 +156,12 @@ export const ReliableEventStreamLive = Layer.effect(
                 ] as const;
               }).pipe(
                 Effect.flatMap((confirmed) =>
-                  Effect.sync(() => {
-                    for (const pending of confirmed) {
-                      emit.single(pending.event);
-                    }
-                  })
-                )
+                  Queue.offerAll(
+                    queue,
+                    confirmed.map((pending) => pending.event)
+                  )
+                ),
+                Effect.asVoid
               );
 
             // Helper: add new event to pending
@@ -155,7 +174,6 @@ export const ReliableEventStreamLive = Layer.effect(
                 });
                 const pending: PendingEvent<TAbi, TEventName> = {
                   event,
-                  receivedAt: Date.now(),
                 };
 
                 const pendingByBlock = new Map(state.pendingByBlock);
@@ -206,27 +224,9 @@ export const ReliableEventStreamLive = Layer.effect(
                 return { locationByKey, pendingByBlock };
               });
 
-            // Map any terminal failure/defect from a background fiber into the
-            // stream's error channel so consumers observe it instead of hanging.
-            // Interruption (normal stream shutdown) is intentionally ignored — it
-            // must not surface as a spurious failure.
-            const failStream = (cause: Cause.Cause<unknown>) =>
-              Effect.sync(() => {
-                if (Cause.isInterruptedOnly(cause)) {
-                  return;
-                }
-                emit.fail(
-                  new EventWatchError({
-                    cause: Cause.squash(cause),
-                    chainId: params.chainId,
-                    message: `Reliable event stream failed on chain ${params.chainId}`,
-                  })
-                );
-              });
-
             // Process events from base stream. If `baseStream` fails, propagate
             // the error to the consumer rather than letting this fiber die silently.
-            const processEvents = yield* Effect.fork(
+            yield* Effect.forkScoped(
               Stream.runForEach(baseStream, (event) =>
                 Effect.gen(function* () {
                   if (event.removed) {
@@ -237,7 +237,7 @@ export const ReliableEventStreamLive = Layer.effect(
                     yield* addPendingEvent(event);
                   }
                 })
-              ).pipe(Effect.catchAllCause(failStream))
+              ).pipe(Effect.catchCause(failStream))
             );
 
             // Background task: check confirmations periodically. A single failed
@@ -245,7 +245,7 @@ export const ReliableEventStreamLive = Layer.effect(
             // skips the tick instead of killing the loop. A terminal failure of the
             // repeat itself (a bug) is mapped onto the stream error channel.
             const checkInterval = params.pollingInterval ?? DEFAULT_POLLING_INTERVAL;
-            const confirmationChecker = yield* Effect.fork(
+            yield* Effect.forkScoped(
               Effect.repeat(
                 Effect.gen(function* () {
                   const currentBlock = yield* Effect.tryPromise({
@@ -253,7 +253,7 @@ export const ReliableEventStreamLive = Layer.effect(
                     try: () => client.getBlockNumber(),
                   }).pipe(
                     Effect.retry(makeRetrySchedule()),
-                    Effect.catchAll((cause) =>
+                    Effect.catch((cause) =>
                       Effect.logWarning(
                         `Confirmation poll failed on chain ${params.chainId}; skipping tick`,
                         cause
@@ -267,16 +267,10 @@ export const ReliableEventStreamLive = Layer.effect(
                   }
                 }),
                 Schedule.spaced(`${checkInterval} millis`)
-              ).pipe(Effect.catchAllCause(failStream))
+              ).pipe(Effect.catchCause(failStream))
             );
-
-            // Clean up on stream end
-            return Effect.gen(function* () {
-              yield* Fiber.interrupt(processEvents);
-              yield* Fiber.interrupt(confirmationChecker);
-            });
-          })
-        );
+          }).pipe(Effect.catchCause(failStream));
+        });
       }),
     };
   })

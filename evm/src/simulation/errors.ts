@@ -1,17 +1,20 @@
 import { Schema } from "effect";
 
-export class SimulationError extends Schema.TaggedError<SimulationError>()("SimulationError", {
+export class SimulationError extends Schema.TaggedErrorClass<SimulationError>()("SimulationError", {
   cause: Schema.optional(Schema.Unknown),
   message: Schema.String,
 }) {}
 
-export class TenderlyApiError extends Schema.TaggedError<TenderlyApiError>()("TenderlyApiError", {
-  message: Schema.String,
-  response: Schema.optional(Schema.Unknown),
-  statusCode: Schema.Number,
-}) {}
+export class TenderlyApiError extends Schema.TaggedErrorClass<TenderlyApiError>()(
+  "TenderlyApiError",
+  {
+    message: Schema.String,
+    response: Schema.optional(Schema.Unknown),
+    statusCode: Schema.Number,
+  }
+) {}
 
-export class TenderlyRateLimitError extends Schema.TaggedError<TenderlyRateLimitError>()(
+export class TenderlyRateLimitError extends Schema.TaggedErrorClass<TenderlyRateLimitError>()(
   "TenderlyRateLimitError",
   {
     message: Schema.String,
@@ -19,7 +22,7 @@ export class TenderlyRateLimitError extends Schema.TaggedError<TenderlyRateLimit
   }
 ) {}
 
-export class TenderlyNotConfiguredError extends Schema.TaggedError<TenderlyNotConfiguredError>()(
+export class TenderlyNotConfiguredError extends Schema.TaggedErrorClass<TenderlyNotConfiguredError>()(
   "TenderlyNotConfiguredError",
   {
     message: Schema.String,

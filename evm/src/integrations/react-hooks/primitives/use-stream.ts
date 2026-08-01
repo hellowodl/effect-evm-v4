@@ -4,6 +4,7 @@ import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
 import * as Scope from "effect/Scope";
 import * as Stream from "effect/Stream";
+import * as SubscriptionRef from "effect/SubscriptionRef";
 import * as React from "react";
 import { fromCause, fromUnknown } from "../internal/error.js";
 import { isDev } from "../internal/is-dev.js";
@@ -60,7 +61,7 @@ export const useStream = <A, E, R>(
       // biome-ignore lint/suspicious/noConsole: Dev-only warning for non-reactive initial changes.
       console.warn(
         [
-          "[effect-evm] useStream does not react to initial changes after mount.",
+          "[effect-evm-v4] useStream does not react to initial changes after mount.",
           "If you need to update the initial value, recreate the stream or use stable inputs.",
         ].join(" ")
       );
@@ -157,7 +158,7 @@ export const useStreamEffect = <A, E, R>(
       scopedClose = scoped.close;
 
       const stream = await runtime.runPromise(
-        Scope.extend(scoped.scope)(
+        Scope.provide(scoped.scope)(
           makeStream() as unknown as Effect.Effect<Stream.Stream<A, E, unknown>, E, unknown>
         )
       );
@@ -216,15 +217,12 @@ export const useStreamValue = <A, E, R>(
   return state.value;
 };
 
-export const useSubscriptionRef = <A>(
-  ref: import("effect/SubscriptionRef").SubscriptionRef<A>,
-  initial: A
-): A => {
-  const state = useStream(ref.changes, { initial });
+export const useSubscriptionRef = <A>(ref: SubscriptionRef.SubscriptionRef<A>, initial: A): A => {
+  const state = useStream(SubscriptionRef.changes(ref), { initial });
   return state.status === "starting" ? initial : (state.value ?? initial);
 };
 
 export const useSubscriptionRefValue = <A>(
-  ref: import("effect/SubscriptionRef").SubscriptionRef<A>,
+  ref: SubscriptionRef.SubscriptionRef<A>,
   initial: A
 ): A => useSubscriptionRef(ref, initial);

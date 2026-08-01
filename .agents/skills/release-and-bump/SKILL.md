@@ -1,116 +1,73 @@
 ---
 name: release-and-bump
-argument-hint: <package-name>
-disable-model-invocation: false
-user-invocable: true
 description:
-  This skill should be used when the user asks to "release and bump", "publish and bump", "release to npm and update
-  new-ui", "release and update consumer", "publish and migrate", or mentions releasing a @prb/effect-* package and
-  bumping it in new-ui.
+  Release effect-evm-v4 to npm and optionally update a downstream consumer explicitly named by the user. Use when the
+  user asks to release, publish, publish and bump, or verify a release of effect-evm-v4.
 ---
 
 # Release and Bump
 
-End-to-end pipeline: release a `@prb/effect-*` package to npm, bump it in the consumer monorepo (`~/sablier/new-ui`),
-migrate any breaking changes or new features.
+Release `effect-evm-v4` from `evm/`. Do not use the upstream `@prb/effect-*`, `ccbump`, or `~/sablier/new-ui` workflows.
 
-## Step 1: Identify Package
+## 1. Confirm Scope and Version
 
-If `$ARGUMENTS` contains a package name, use it directly. Otherwise, infer from the current working directory by reading
-`package.json` — if it has a `name` starting with `@prb/effect-`, use that.
+1. Read `evm/package.json` and `evm/CHANGELOG.md`.
+2. Confirm the package name is `effect-evm-v4` and the requested version matches both files.
+3. Inspect `git status`, staged changes, remotes, and the current branch. Do not stage unrelated files or publish a
+   mixed, unreviewed worktree.
+4. Confirm `origin` points to `hellowodl/effect-evm-v4` and `upstream` points to `PaulRBerg/prb-effect`.
 
-If neither provides a package name (e.g., cwd is the monorepo root and no argument was given), ask the user which
-package to release using `AskUserQuestion` with these options:
+## 2. Validate the Package
 
-- @prb/effect-evm
-- @prb/effect-evm-safe
-- @prb/effect-next
-- @prb/effect-solana
-- @prb/effect-xstate
-
-Then `cd` into the package directory before continuing.
-
-## Step 2: Run release commands (publish from package directory)
-
-Run the release bump + push flow first:
+Run the repository gates in order:
 
 ```bash
-zsh -ic 'ccbump <package-name>'
-git push origin
+just type-check evm
+just evm::test
+cd evm
+npm pack --dry-run
 ```
 
-Then run `npm publish` from within the released package's directory:
+Confirm the tarball metadata, public exports, LICENSE, NOTICE, and README. Confirm no test files, secrets, or `catalog:`
+ranges are published, and confirm internal implementation paths are not publicly resolvable. Stop on any failure.
+
+## 3. Verify npm Access
+
+Run:
 
 ```bash
-cd <package-directory>
-eval "$(direnv export zsh)"
-npm publish
+npm whoami
+npm view effect-evm-v4@<version> version
 ```
 
-`npm publish` MUST run from the package directory (e.g., `evm-safe/` for `@prb/effect-evm-safe`), not the monorepo root.
+Authentication must be configured privately by the user. Never request or print an npm token. For a first release, a
+not-found response is expected; for later releases, stop if the version already exists.
 
-If any command exits with a non-zero code, **stop and report the error**. Do not proceed.
+## 4. Publish Source
 
-## Step 3: Verify npm Publication
+Commit only the reviewed release files and push them to `origin` before publishing npm artifacts. Do not push when the
+worktree scope is ambiguous. Create the matching GitHub tag or release only when the user requested it.
 
-Read `package.json` to get the new version (ccbump modifies it in Step 2).
+## 5. Publish npm Package
 
-Verify the package is available on npm:
+Run from `evm/`, never the repository root:
 
 ```bash
-npm view <package-name>@<new-version> version
+npm publish --tag latest
 ```
 
-If the command fails (package not yet propagated), wait 10 seconds and retry once:
+Then verify the immutable published version:
 
 ```bash
-sleep 10 && npm view <package-name>@<new-version> version
+npm view effect-evm-v4@<version> version
 ```
 
-If still failing after the retry, warn the user that npm propagation is slow but continue to the next step — the version
-was published successfully if Step 2 succeeded.
+## 6. Update a Consumer Only When Named
 
-## Step 4: Bump in `~/sablier/new-ui`
+Read `references/consumer-map.md`. Do not infer a consumer repository. If the user explicitly names one, update its
+dependency and migrate imports from `@prb/effect-evm` or `effect-evm` to `effect-evm-v4`, then run that repository's
+quality gates. Do not commit consumer changes unless explicitly requested.
 
-Delegate to the `bump-deps` skill to update the package version in the consumer monorepo:
+## 7. Report
 
-1. Change directory: `cd ~/sablier/new-ui`
-2. Invoke: `/bump-deps <package-name>`
-
-The `bump-deps` skill handles catalog resolution, version format preservation, and `bun install` automatically.
-
-## Step 5: Migrate Consumer Code
-
-Only execute this step if the package has a CHANGELOG.
-
-1. Read `references/consumer-map.md` to determine which apps consume this package and where the CHANGELOG lives.
-2. Read the CHANGELOG from the released package directory (e.g., `evm/CHANGELOG.md`).
-3. Extract entries for the **new version only**.
-4. For each changelog category, take action:
-
-| Category    | Action                                                                                                      |
-| ----------- | ----------------------------------------------------------------------------------------------------------- |
-| **Changed** | Search consumer app directories for affected imports/usages. Apply renames, signature changes, API updates. |
-| **Removed** | Search consumer app directories for removed exports. Delete usages or replace with alternatives.            |
-| **Added**   | Search consumer app directories for opportunities to adopt the new API. Implement the integration.          |
-| **Fixed**   | No action needed.                                                                                           |
-
-5. Draft a migration plan from the changelog entries and affected consumer apps, then pass it to the `work` skill for
-   implementation.
-
-## Step 6: Report Summary
-
-Print a summary:
-
-```
-Package:     <package-name>
-Version:     <new-version>
-npm:         https://npmjs.com/package/<package-name>/v/<new-version>
-Consumer:    ~/sablier/new-ui
-Files changed in new-ui:
-  - <list of modified files>
-Migrations applied:
-  - <list of renames/removals/changes/new features, or "None">
-```
-
-Do not commit changes in `~/sablier/new-ui` unless the user explicitly asks.
+Report the Git commit and tag, npm package/version URL, validation results, and any consumer files changed.

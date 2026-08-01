@@ -53,9 +53,9 @@ function setStateUntilPersisted(options: {
       yield* SubscriptionRef.set(options.stateRef, { ...options.state });
       const tx = yield* options.store.get(options.txId);
       if (tx?.status === options.expectedStatus) {
-        return;
+        return yield* Effect.void;
       }
-      yield* Effect.yieldNow();
+      yield* Effect.yieldNow;
     }
 
     const tx = yield* options.store.get(options.txId);
@@ -105,7 +105,7 @@ describe("TxPersistence", () => {
         // If cancelled is terminal, these updates must not be persisted.
         for (let attempt = 0; attempt < 50; attempt += 1) {
           yield* SubscriptionRef.set(txStateRef, { ...PENDING_STATE });
-          yield* Effect.yieldNow();
+          yield* Effect.yieldNow;
         }
 
         const final = yield* store.get(txId);

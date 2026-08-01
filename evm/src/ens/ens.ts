@@ -84,7 +84,9 @@ export type EnsResolverShape = {
   ) => Effect.Effect<string, EnsTextNotFoundError | EnsResolutionError | ClientNotFoundError>;
 };
 
-export class EnsResolver extends Context.Tag("ew3/EnsResolver")<EnsResolver, EnsResolverShape>() {}
+export class EnsResolver extends Context.Service<EnsResolver, EnsResolverShape>()(
+  "ew3/EnsResolver"
+) {}
 
 /**
  * Live implementation of EnsResolver service

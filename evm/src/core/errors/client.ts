@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-export class ClientNotFoundError extends Schema.TaggedError<ClientNotFoundError>()(
+export class ClientNotFoundError extends Schema.TaggedErrorClass<ClientNotFoundError>()(
   "ClientNotFoundError",
   {
     chainId: Schema.Number,
@@ -8,7 +8,7 @@ export class ClientNotFoundError extends Schema.TaggedError<ClientNotFoundError>
   }
 ) {}
 
-export class WalletNotConnectedError extends Schema.TaggedError<WalletNotConnectedError>()(
+export class WalletNotConnectedError extends Schema.TaggedErrorClass<WalletNotConnectedError>()(
   "WalletNotConnectedError",
   {
     chainId: Schema.Number,
@@ -16,7 +16,7 @@ export class WalletNotConnectedError extends Schema.TaggedError<WalletNotConnect
   }
 ) {}
 
-export class WrongNetworkError extends Schema.TaggedError<WrongNetworkError>()(
+export class WrongNetworkError extends Schema.TaggedErrorClass<WrongNetworkError>()(
   "WrongNetworkError",
   {
     actualChainId: Schema.Number,
@@ -25,7 +25,7 @@ export class WrongNetworkError extends Schema.TaggedError<WrongNetworkError>()(
   }
 ) {}
 
-export class TransportError extends Schema.TaggedError<TransportError>()("TransportError", {
+export class TransportError extends Schema.TaggedErrorClass<TransportError>()("TransportError", {
   cause: Schema.optional(Schema.Unknown),
   message: Schema.String,
   url: Schema.String,

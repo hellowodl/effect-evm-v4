@@ -3,10 +3,6 @@ import "./node_modules/@prb/devkit/just/base.just"
 
 # Package modules
 mod evm "evm"
-mod evm_safe "evm-safe"
-mod next "next"
-mod solana "solana"
-mod xstate "xstate"
 
 # ---------------------------------------------------------------------------- #
 #                                    RECIPES                                   #
@@ -20,25 +16,13 @@ build package:
     cd {{ package }} && just build
 alias b := build
 
-# Build all packages (.tgz)
+# Build all packages
 @build-all:
     cd evm && just build
     echo ""
 
-    cd evm-safe && just build
-    echo ""
-
-    cd next && just build
-    echo ""
-
-    cd solana && just build
-    echo ""
-
-    cd xstate && just build
-    echo ""
-
     echo '{{ GREEN }}✓ All packages built{{ NORMAL }}'
-alias ba := build
+alias ba := build-all
 
 # Bump beta version using jq (e.g., just bump-beta evm)
 @bump-beta app:
@@ -54,15 +38,6 @@ alias bb := bump-beta
         "**/*.tsbuildinfo" \
         "**/*.tgz"
 
-# Run Claude to bump release, push git changes, and publish to npm with env loaded from .envrc
-@release package:
-    zsh -ic 'ccbump {{ package }}'
-    git push origin
-    eval "$(direnv export zsh)"
-    cd {{ package }}
-    npm publish
-alias rel := release
-
 # ---------------------------------------------------------------------------- #
 #                                     TESTS                                    #
 # ---------------------------------------------------------------------------- #
@@ -74,10 +49,10 @@ alias rel := release
 alias t := test-unit
 alias tu := test-unit
 
-# Run integration tests with env vars decrypted from .env via dotenvx
+# Run integration tests without loading secrets
 [group("tests")]
 @test-integration +args="":
-    na dotenvx run --quiet -- na vitest run --exclude '**/*.test.ts' {{ args }}
+    na vitest run --exclude '**/*.test.ts' {{ args }}
 alias ti := test-integration
 
 # ---------------------------------------------------------------------------- #
@@ -86,28 +61,12 @@ alias ti := test-integration
 
 [group("checks")]
 @type-check package="":
-    {{ if package == "" {
-        "just type-check-all"
-    } else {
-        "cd " + package + " && na tsgo --noEmit"
-    } }}
+    {{ if package == "" { "just type-check-all" } else { "cd " + package + " && na tsgo --noEmit" } }}
 
 # Run TypeScript check for all packages
 [group("checks")]
 @type-check-all:
-    echo "🔍 Type checking effect-evm..."
+    echo "🔍 Type checking effect-evm-v4..."
     cd evm && na tsgo --noEmit
-
-    echo "🔍 Type checking effect-evm-safe..."
-    cd evm-safe && na tsgo --noEmit
-
-    echo "🔍 Type checking effect-next..."
-    cd next && na tsgo --noEmit
-
-    echo "🔍 Type checking effect-solana..."
-    cd solana && na tsgo --noEmit
-
-    echo "🔍 Type checking effect-xstate..."
-    cd xstate && na tsgo --noEmit
 
     echo "✅ All type check passed"

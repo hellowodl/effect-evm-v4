@@ -1,0 +1,16 @@
+effect-evm-v4
+
+This software is a modified fork of @prb/effect-evm, originally developed
+by Paul Razvan Berg and distributed at:
+https://github.com/PaulRBerg/prb-effect/tree/main/evm
+
+The original software is Copyright (c) 2025 Paul Razvan Berg and is licensed
+under the MIT License.
+
+This fork contains changes for Effect v4 compatibility and is maintained by
+hellowodl:
+https://github.com/hellowodl/effect-evm-v4
+
+This fork is not affiliated with or endorsed by the original author.
+
+See LICENSE for the full license text.

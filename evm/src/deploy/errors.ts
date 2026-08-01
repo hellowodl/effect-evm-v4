@@ -1,11 +1,11 @@
 import { Schema } from "effect";
 
-export class DeploymentError extends Schema.TaggedError<DeploymentError>()("DeploymentError", {
+export class DeploymentError extends Schema.TaggedErrorClass<DeploymentError>()("DeploymentError", {
   cause: Schema.optional(Schema.Unknown),
   message: Schema.String,
 }) {}
 
-export class DeploymentRevertedError extends Schema.TaggedError<DeploymentRevertedError>()(
+export class DeploymentRevertedError extends Schema.TaggedErrorClass<DeploymentRevertedError>()(
   "DeploymentRevertedError",
   {
     bytecode: Schema.String,
@@ -14,7 +14,7 @@ export class DeploymentRevertedError extends Schema.TaggedError<DeploymentRevert
   }
 ) {}
 
-export class BytecodeMismatchError extends Schema.TaggedError<BytecodeMismatchError>()(
+export class BytecodeMismatchError extends Schema.TaggedErrorClass<BytecodeMismatchError>()(
   "BytecodeMismatchError",
   {
     actual: Schema.String,

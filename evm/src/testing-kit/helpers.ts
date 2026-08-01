@@ -1,11 +1,11 @@
 /**
- * Test assertion helpers for effect-evm
+ * Test assertion helpers for effect-evm-v4
  *
  * Provides type-safe utilities for asserting on Effect types in tests.
  */
 
 import type { Context } from "effect";
-import { Cause, Effect, Either, Exit, Layer, Option } from "effect";
+import { Cause, Effect, Exit, Layer, Option, Result } from "effect";
 import { expect } from "vitest";
 import { ClientNotFoundError, WalletNotConnectedError } from "#src/core/index.js";
 
@@ -27,7 +27,7 @@ export const expectTaggedFailure = <E extends { _tag: string }>(
 ): void => {
   expect(Exit.isFailure(exit)).toBe(true);
   if (Exit.isFailure(exit)) {
-    const error = Cause.failureOption(exit.cause);
+    const error = Cause.findErrorOption(exit.cause);
     expect(Option.isSome(error)).toBe(true);
     if (Option.isSome(error)) {
       expect((error.value as { _tag: string })._tag).toBe(expectedTag);
@@ -36,47 +36,47 @@ export const expectTaggedFailure = <E extends { _tag: string }>(
 };
 
 /**
- * Type-safe assertion for Either.Left - returns the left value for further assertions
+ * Type-safe assertion for Result.Failure - returns the failure for further assertions
  *
- * @param either - The Either to assert on
- * @returns The left value for further assertions
- * @throws Error if Either is Right
+ * @param result - The Result to assert on
+ * @returns The failure for further assertions
+ * @throws Error if the Result is a Success
  *
  * @example
  * ```typescript
- * const result = Either.left(new Error("boom"));
+ * const result = Result.fail(new Error("boom"));
  * const error = assertLeft(result);
  * expect(error.message).toBe("boom");
  * ```
  */
-export const assertLeft = <L, R>(either: Either.Either<R, L>): L => {
-  expect(Either.isLeft(either)).toBe(true);
-  if (!Either.isLeft(either)) {
-    throw new Error("Expected Left");
+export const assertLeft = <E, A>(result: Result.Result<A, E>): E => {
+  expect(Result.isFailure(result)).toBe(true);
+  if (!Result.isFailure(result)) {
+    throw new Error("Expected Failure");
   }
-  return either.left;
+  return result.failure;
 };
 
 /**
- * Type-safe assertion for Either.Right - returns the right value for further assertions
+ * Type-safe assertion for Result.Success - returns the success for further assertions
  *
- * @param either - The Either to assert on
- * @returns The right value for further assertions
- * @throws Error if Either is Left
+ * @param result - The Result to assert on
+ * @returns The success for further assertions
+ * @throws Error if the Result is a Failure
  *
  * @example
  * ```typescript
- * const result = Either.right(42);
+ * const result = Result.succeed(42);
  * const value = assertRight(result);
  * expect(value).toBe(42);
  * ```
  */
-export const assertRight = <L, R>(either: Either.Either<R, L>): R => {
-  expect(Either.isRight(either)).toBe(true);
-  if (!Either.isRight(either)) {
-    throw new Error("Expected Right");
+export const assertRight = <E, A>(result: Result.Result<A, E>): A => {
+  expect(Result.isSuccess(result)).toBe(true);
+  if (!Result.isSuccess(result)) {
+    throw new Error("Expected Success");
   }
-  return either.right;
+  return result.success;
 };
 
 /**
@@ -235,7 +235,7 @@ export const withWalletChainIdCheck = <P extends { chainId: number }, A, E>(
  * 2. Mapping merged config to service shape
  * 3. Creating a Layer.succeed
  *
- * @param ServiceTag - The Effect Context.Tag for the service
+ * @param ServiceTag - The Effect Context service tag
  * @param defaults - Default configuration object
  * @param config - Partial configuration to override defaults
  * @param mapToShape - Function that maps merged config to the service shape
@@ -268,12 +268,12 @@ export const withWalletChainIdCheck = <P extends { chainId: number }, A, E>(
  * ```
  */
 export const makeMockServiceLayer = <I, S, C extends Record<string, unknown>>(
-  ServiceTag: Context.Tag<I, S>,
+  ServiceTag: Context.Key<I, S>,
   defaults: C,
   config: Partial<C>,
   mapToShape: (merged: C) => S
 ): Layer.Layer<I> => {
   const merged = { ...defaults, ...config } as C;
   const serviceShape = mapToShape(merged);
-  return Layer.succeed(ServiceTag, ServiceTag.of(serviceShape));
+  return Layer.succeed(ServiceTag, serviceShape);
 };

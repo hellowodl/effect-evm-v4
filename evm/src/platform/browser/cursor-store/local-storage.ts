@@ -108,7 +108,7 @@ export const LocalStorageCursorStoreLive = Layer.effect(
           yield* Effect.logWarning(`Corrupt cursor data for key "${key}", deleting entry`);
 
           // Delete corrupt entry
-          yield* storage.remove(storageKey).pipe(Effect.catchAll(() => Effect.void));
+          yield* storage.remove(storageKey).pipe(Effect.catch(() => Effect.void));
 
           return null;
         }
@@ -189,7 +189,7 @@ export const LocalStorageCursorStoreLive = Layer.effect(
       // landed after it.
       const removeDeleted = storage
         .remove(storageKey)
-        .pipe(Effect.catchAll(logStorageFailure("remove deleted")));
+        .pipe(Effect.catch(logStorageFailure("remove deleted")));
 
       const step: Effect.Effect<boolean> = Effect.gen(function* () {
         yield* Effect.sleep(DEFAULT_CURSOR_FLUSH_DELAY);
@@ -205,7 +205,7 @@ export const LocalStorageCursorStoreLive = Layer.effect(
 
         yield* storage
           .set(storageKey, serializeCursor(directive.cursor))
-          .pipe(Effect.catchAll(logStorageFailure("flush")));
+          .pipe(Effect.catch(logStorageFailure("flush")));
 
         const after = yield* settleAfterWrite(key);
         if (after._tag === "removeDeleted") {
@@ -250,7 +250,7 @@ export const LocalStorageCursorStoreLive = Layer.effect(
         });
 
         if (shouldSchedule) {
-          yield* Effect.forkDaemon(flushLoop(key));
+          yield* Effect.forkDetach(flushLoop(key));
         }
       });
 

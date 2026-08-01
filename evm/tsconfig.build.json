@@ -4,10 +4,13 @@
   "compilerOptions": {
     "lib": ["ESNext", "DOM"],
     "outDir": "./dist",
+    "paths": {
+      "#src/*": ["./src/*"]
+    },
     "rootDir": "./src",
-    "customConditions": ["source"]
+    "customConditions": []
   },
-  "exclude": ["**/node_modules/", "src/**/*.test.ts"],
+  "exclude": ["**/node_modules/", "src/**/*.test.ts", "src/**/*.test.integration.ts"],
   "include": [
     // Directories
     "src/"

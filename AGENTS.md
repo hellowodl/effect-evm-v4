@@ -1,10 +1,10 @@
-# prb-effect Development Guidelines
+# effect-evm-v4 Development Guidelines
 
-AI agents working on prb-effect MUST follow these guidelines.
+AI agents working on effect-evm-v4 MUST follow these guidelines.
 
 ## Tech Stack
 
-- **Effect**: Effect-TS v3.x
+- **Effect**: Effect v4 (`4.0.0-beta.102`)
 - **Language**: TypeScript v5.9+
 - **Package Manager**: Bun with workspace catalogs
 - **Task Runner**: Just
@@ -21,8 +21,8 @@ AI agents working on prb-effect MUST follow these guidelines.
 ## Setup
 
 ```bash
-git clone https://github.com/PaulRBerg/prb-effect.git
-cd prb-effect
+git clone https://github.com/hellowodl/effect-evm-v4.git
+cd effect-evm-v4
 bun install
 ```
 
@@ -44,15 +44,11 @@ After generating code, run these commands **in order**.
 
 If any command fails, fix errors before continuing.
 
-## Monorepo Structure
+## Repository Structure
 
 ```
-prb-effect/
-├── evm/                 # @prb/effect-evm - EVM/viem integration
-├── evm-safe/            # @prb/effect-evm-safe - Safe Apps integration
-├── next/                # @prb/effect-next - Next.js integration
-├── solana/              # @prb/effect-solana - Solana integration
-├── xstate/              # @prb/effect-xstate - xState v5 workflows
+effect-evm-v4/
+├── evm/                 # effect-evm-v4 - EVM/viem integration
 ├── justfile             # Task automation
 └── package.json         # Root workspace with catalogs
 ```
@@ -65,20 +61,15 @@ just full-check          # Run all code checks (prettier + biome + type check)
 just full-write          # Auto-fix formatting and linting issues
 just biome-check         # Check code with Biome
 just build <package>     # Build a single package (e.g., just build evm)
-just build-all           # Build all packages (.tgz)
+just build-all           # Build all packages
 just type-check <package> # TypeScript type check a single package
 just type-check-all      # TypeScript type check all packages
 just tu                  # Run unit tests
 just ti                  # Run integration tests
 just clean               # Clean dist, tsbuildinfo, tgz artifacts
-just evm::build          # Build @prb/effect-evm
-just evm::test           # Test @prb/effect-evm
-just evm::tui            # Run @prb/effect-evm tests in UI mode
-just evm-safe::build     # Build @prb/effect-evm-safe
-just next::build         # Build @prb/effect-next
-just next::test          # Test @prb/effect-next
-just solana::build       # Build @prb/effect-solana
-just xstate::build       # Build @prb/effect-xstate
+just evm::build          # Build effect-evm-v4
+just evm::test           # Test effect-evm-v4
+just evm::tui            # Run effect-evm-v4 tests in UI mode
 ```
 
 ## Development Workflow
@@ -107,18 +98,17 @@ Secrets are managed with [dotenvx](https://dotenvx.com) (`@dotenvx/dotenvx`, roo
 
 Rules:
 
-- Integration tests (`just ti`) run through `dotenvx run`, which decrypts `.env` at runtime. Do not pass secrets via
-  shell exports or plaintext env files.
+- Automated tests, including `just ti`, run without loading `.env` and must not receive API keys or secrets.
+- Keep genuinely secret-backed integration suites in source but statically disabled with `describe.skip` or `it.skip`
+  until they are intentionally re-enabled. Do not use `skipIf`, `runIf`, or environment-dependent enablement.
+- CI test jobs must not declare or inject API keys or secrets.
 - Add or update a secret with `na dotenvx set KEY value` (encrypts in place). Never write plaintext values into `.env`
   directly.
 - Without `.env.keys`, dotenvx logs a `MISSING_PRIVATE_KEY` error and injects the literal `encrypted:...` string instead
   of the decrypted value. Code reading these vars must treat `encrypted:`-prefixed values as absent and degrade
-  gracefully (see `evm-safe/src/safe/detection.test.integration.ts`).
-- Current keys: `ROUTEMESH_API_KEY` — RouteMesh RPC load balancer (`https://lb.routeme.sh/rpc/CHAIN_ID/API_KEY`), used
-  as the primary RPC in integration tests.
-- CI does not use dotenvx: GitHub Actions injects `ROUTEMESH_API_KEY` from the repository secret of the same name (see
-  `.github/workflows/_base.ci.yml`). dotenvx never overrides pre-set env vars, so a value from the shell or CI always
-  wins over `.env`.
+  gracefully.
+- Current locally managed key: `ROUTEMESH_API_KEY` — RouteMesh RPC load balancer
+  (`https://lb.routeme.sh/rpc/CHAIN_ID/API_KEY`). It is not used by automated tests.
 
 ## Code Standards
 

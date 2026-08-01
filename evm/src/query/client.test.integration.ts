@@ -55,8 +55,8 @@ describe("QueryClient", () => {
         return "shared";
       });
 
-      const fiber1 = yield* Effect.fork(queryClient.query("key", effect, { ttl: 60_000 }));
-      const fiber2 = yield* Effect.fork(queryClient.query("key", effect, { ttl: 60_000 }));
+      const fiber1 = yield* Effect.forkChild(queryClient.query("key", effect, { ttl: 60_000 }));
+      const fiber2 = yield* Effect.forkChild(queryClient.query("key", effect, { ttl: 60_000 }));
 
       yield* Deferred.await(started);
       yield* Deferred.succeed(gate, undefined);
@@ -103,7 +103,9 @@ describe("QueryClient", () => {
               current: () => SubscriptionRef.get(headRef),
               watch: () =>
                 Effect.succeed(
-                  headRef.changes.pipe(Stream.onStart(Deferred.succeed(watchStarted, undefined)))
+                  SubscriptionRef.changes(headRef).pipe(
+                    Stream.onStart(Deferred.succeed(watchStarted, undefined))
+                  )
                 ),
             })
           ),

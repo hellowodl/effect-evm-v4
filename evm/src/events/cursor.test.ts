@@ -1,6 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
-import type { Context } from "effect";
-import { Chunk, Effect, Layer, Stream } from "effect";
+import { Effect, Layer, Stream } from "effect";
 import type { Abi, Address, Hash } from "viem";
 import type { BackfillParams, DecodedEvent, WatchParams } from "#src/events/index.js";
 import {
@@ -104,14 +103,14 @@ describe("CursorStream", () => {
   const MockEventStreamLive = Layer.succeed(EventStream, {
     decodeReceipt: () => Effect.succeed([]),
     watch: () => Effect.succeed(Stream.make(mockEvent)),
-  } as Context.Tag.Service<EventStream>);
+  } as EventStream["Service"]);
 
   // Mock EventBackfill that returns our test event
   // Type assertion needed because the mock returns non-generic types while the service expects generic methods
   const MockEventBackfillLive = Layer.succeed(EventBackfill, {
     fetch: () => Effect.succeed(Stream.make(mockEvent)),
     fetchAll: () => Effect.succeed([mockEvent]),
-  } as Context.Tag.Service<EventBackfill>);
+  } as EventBackfill["Service"]);
 
   // Build a test layer from custom EventStream / EventBackfill mocks. A mock
   // public client is always provided since CursorStreamLive now resolves the
@@ -152,8 +151,7 @@ describe("CursorStream", () => {
       });
 
       // Consume one event from the stream
-      const eventsChunk = yield* Stream.runCollect(Stream.take(stream, 1));
-      const events = Chunk.toArray(eventsChunk);
+      const events = yield* Stream.runCollect(Stream.take(stream, 1));
       expect(events.length).toBe(1);
       expect(events[0]?.eventName).toBe("Transfer");
       expect(events[0]?.blockNumber).toBe(12345n);
@@ -186,7 +184,7 @@ describe("CursorStream", () => {
         captured.fromBlock = params.fromBlock;
         return Effect.succeed(Stream.fromIterable(watchEvents));
       },
-    } as Context.Tag.Service<EventStream>);
+    } as EventStream["Service"]);
 
     return Effect.gen(function* () {
       const cursorStream = yield* CursorStream;
@@ -211,7 +209,7 @@ describe("CursorStream", () => {
         eventName: "Transfer",
       });
 
-      const events = Chunk.toArray(yield* Stream.runCollect(stream));
+      const events = yield* Stream.runCollect(stream);
 
       // Resume is inclusive of the cursor block, not +1.
       expect(captured.fromBlock).toBe(100n);
@@ -237,7 +235,7 @@ describe("CursorStream", () => {
         // logIndex 0 at block 0 is already delivered and must be filtered out.
         return Effect.succeed(Stream.fromIterable([makeEvent(0n, 0), makeEvent(0n, 1)]));
       },
-    } as Context.Tag.Service<EventStream>);
+    } as EventStream["Service"]);
 
     return Effect.gen(function* () {
       const cursorStore = yield* CursorStore;
@@ -264,7 +262,7 @@ describe("CursorStream", () => {
         fromBlock: 999n,
       });
 
-      const events = Chunk.toArray(yield* Stream.runCollect(stream));
+      const events = yield* Stream.runCollect(stream);
 
       // 0n cursor honored: resume from 0, not the 999n fallback.
       expect(captured.fromBlock).toBe(0n);
@@ -281,7 +279,7 @@ describe("CursorStream", () => {
         return Effect.succeed(Stream.make(makeEvent(500n, 0)));
       },
       fetchAll: () => Effect.succeed([]),
-    } as Context.Tag.Service<EventBackfill>);
+    } as EventBackfill["Service"]);
 
     const SyncWatchLive = Layer.succeed(EventStream, {
       decodeReceipt: () => Effect.succeed([]),
@@ -289,7 +287,7 @@ describe("CursorStream", () => {
         captured.watchFromBlock = params.fromBlock;
         return Effect.succeed(Stream.make(makeEvent(1001n, 0)));
       },
-    } as Context.Tag.Service<EventStream>);
+    } as EventStream["Service"]);
 
     return Effect.gen(function* () {
       const cursorStream = yield* CursorStream;
@@ -305,7 +303,7 @@ describe("CursorStream", () => {
         // toBlock intentionally undefined -> head resolved from the mock client (1000n).
       });
 
-      const events = Chunk.toArray(yield* Stream.runCollect(stream));
+      const events = yield* Stream.runCollect(stream);
 
       // Backfill is bounded at the resolved head (1000n) and the watch starts at
       // head + 1 (1001n): the two phases are contiguous with no gap.

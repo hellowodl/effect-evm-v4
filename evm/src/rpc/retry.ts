@@ -19,7 +19,7 @@ export type RetryConfig = BackoffConfig & {
  * @example
  * ```typescript
  * import { Effect } from "effect";
- * import { RetryConfigFromEnv } from "effect-evm/rpc";
+ * import { RetryConfigFromEnv } from "effect-evm-v4/rpc";
  *
  * const program = Effect.gen(function* () {
  *   const config = yield* RetryConfigFromEnv;
@@ -104,7 +104,8 @@ export const makeRetrySchedule = <E>(config?: RetryConfig): Schedule.Schedule<nu
   const { retryableErrors = defaultRetryableErrors, ...backoffConfig } = config ?? {};
 
   return makeBackoffSchedule(backoffConfig).pipe(
-    Schedule.whileInput<E>((error) => isRetryableError(error, retryableErrors))
+    Schedule.setInputType<E>(),
+    Schedule.while(({ input }) => isRetryableError(input, retryableErrors))
   );
 };
 

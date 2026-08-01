@@ -76,8 +76,7 @@ describe("ContractReader", () => {
 
         expect(Exit.isFailure(exit)).toBe(true);
         if (Exit.isFailure(exit)) {
-          const error = exit.cause;
-          expect(error._tag).toBe("Fail");
+          expect(Exit.hasFails(exit)).toBe(true);
         }
       }).pipe(Effect.provide(Layer.provide(ContractReaderLive, makeMockPublicClientLayer())))
     );

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@effect/vitest";
 import type { Scope } from "effect";
-import { Chunk, Effect, Layer, Stream } from "effect";
+import { Effect, Layer, Stream, SubscriptionRef } from "effect";
 import type { Hash, TransactionReceipt } from "viem";
 import { MIN_TX_GAS } from "#src/constants/index.js";
 import { makeMockPublicClientLayer, TEST_CHAIN_ID, TEST_TX_HASH } from "#src/testing-kit/index.js";
@@ -57,12 +57,12 @@ describe("TxManager (A6 unit)", () => {
             const manager = yield* TxManager;
             const ref = yield* manager.track(TEST_CHAIN_ID, TEST_TX_HASH);
 
-            const terminal = yield* ref.changes.pipe(
+            const terminal = yield* SubscriptionRef.changes(ref).pipe(
               Stream.filter((state) => state.status === "mined" || state.status === "failed"),
               Stream.take(1),
               Stream.runCollect
             );
-            return Chunk.toArray(terminal)[0];
+            return terminal[0];
           });
 
           const result = yield* provideManager(program, {
@@ -96,12 +96,12 @@ describe("TxManager (A6 unit)", () => {
 
           // Collect pending states (emitted from watched blocks) up to and including
           // the eventual mined state.
-          const states = yield* ref.changes.pipe(
+          const states = yield* SubscriptionRef.changes(ref).pipe(
             Stream.filter((state) => state.status === "pending" || state.status === "mined"),
             Stream.takeUntil((state) => state.status === "mined"),
             Stream.runCollect
           );
-          return Chunk.toArray(states);
+          return states;
         });
 
         const states = yield* provideManager(program, {

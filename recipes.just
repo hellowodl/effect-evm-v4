@@ -21,7 +21,7 @@ default:
 #                                     BUILD                                    #
 # ---------------------------------------------------------------------------- #
 
-# Build the package (clean, compile, pack)
+# Build the package (clean and compile)
 [group("build")]
 @build:
     just --quiet clean
@@ -57,8 +57,8 @@ alias tui := test-ui
     na vitest run --exclude '**/*.test.integration.ts' {{ args }}
 alias tu := test-unit
 
-# Run integration tests only, with env vars decrypted from the root .env via dotenvx
+# Run integration tests only, without loading secrets
 [group("tests")]
 @test-integration *args:
-    na dotenvx run -f ../.env --quiet -- na vitest run '.integration.' {{ args }}
+    na vitest run '.integration.' {{ args }}
 alias ti := test-integration

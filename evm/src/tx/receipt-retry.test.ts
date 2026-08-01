@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Effect, Exit, Fiber, Schedule, TestClock } from "effect";
+import { Effect, Exit, Fiber, Schedule } from "effect";
+import { TestClock } from "effect/testing";
 import {
   TransactionNotFoundError,
   TransactionReceiptNotFoundError,
@@ -18,7 +19,8 @@ describe("receipt retry schedule", () => {
   // Use same patterns as production, but with minimal delays for testing
   const makeTestRetrySchedule = () =>
     makeBackoffSchedule({ baseDelay: 1, jitter: false, maxRetries: 3 }).pipe(
-      Schedule.whileInput<TxFailedError | ReceiptTimeoutError | TxReplacedError>((error) => {
+      Schedule.setInputType<TxFailedError | ReceiptTimeoutError | TxReplacedError>(),
+      Schedule.while(({ input: error }) => {
         // Only retry TxFailedError with retryable cause - not timeouts or replacements
         if (error._tag === "TxFailedError" && error.cause) {
           return isRetryableError(error.cause, receiptRetryablePatterns);
@@ -32,7 +34,7 @@ describe("receipt retry schedule", () => {
     adjust: Parameters<typeof TestClock.adjust>[0] = "10 seconds"
   ) =>
     Effect.gen(function* () {
-      const fiber = yield* Effect.fork(effect);
+      const fiber = yield* Effect.forkChild(effect);
       yield* TestClock.adjust(adjust);
       return yield* Fiber.join(fiber);
     });

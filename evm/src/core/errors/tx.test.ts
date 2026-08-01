@@ -1,4 +1,4 @@
-import { Cause, Effect, Exit } from "effect";
+import { Cause, Effect, Exit, Option } from "effect";
 import { describe, expect, it } from "vitest";
 import {
   catchUserRejection,
@@ -174,7 +174,11 @@ describe("catchUserRejection", () => {
     const exit = await Effect.runPromiseExit(catchUserRejection(effect, null));
     expect(Exit.isFailure(exit)).toBe(true);
     if (Exit.isFailure(exit)) {
-      expect(exit.cause._tag).toBe("Fail");
+      const error = Cause.findErrorOption(exit.cause);
+      expect(Option.isSome(error)).toBe(true);
+      if (Option.isSome(error)) {
+        expect(error.value._tag).toBe("InsufficientFundsError");
+      }
     }
   });
 

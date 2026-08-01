@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Effect, TestClock } from "effect";
+import { Effect } from "effect";
+import { TestClock } from "effect/testing";
 import { makeRpcCacheLive, RpcCache } from "#src/rpc/index.js";
 
 describe("RpcCache", () => {
@@ -33,6 +34,18 @@ describe("RpcCache", () => {
       const result = yield* cache.get("expiring-key");
       expect(result).toBeNull();
     }).pipe(Effect.provide(makeRpcCacheLive({ ttl: 50 })))
+  );
+
+  it.effect("per-entry TTL overrides the default", () =>
+    Effect.gen(function* () {
+      const cache = yield* RpcCache;
+      yield* cache.set("expiring-key", "value", undefined, 20);
+
+      yield* TestClock.adjust("25 millis");
+
+      const result = yield* cache.get("expiring-key");
+      expect(result).toBeNull();
+    }).pipe(Effect.provide(makeRpcCacheLive({ ttl: 1000 })))
   );
 
   it.effect("max size LRU eviction removes oldest entry", () =>
@@ -81,6 +94,21 @@ describe("RpcCache", () => {
       expect(result3).toBe("value3");
       expect(result4).toBe("value4");
     }).pipe(Effect.provide(makeRpcCacheLive({ maxSize: 3 })))
+  );
+
+  it.effect("overwriting a key makes it most recently used", () =>
+    Effect.gen(function* () {
+      const cache = yield* RpcCache;
+
+      yield* cache.set("key1", "value1");
+      yield* cache.set("key2", "value2");
+      yield* cache.set("key1", "updated");
+      yield* cache.set("key3", "value3");
+
+      expect(yield* cache.get("key1")).toBe("updated");
+      expect(yield* cache.get("key2")).toBeNull();
+      expect(yield* cache.get("key3")).toBe("value3");
+    }).pipe(Effect.provide(makeRpcCacheLive({ maxSize: 2 })))
   );
 
   it.effect("invalidate removes specific key", () =>

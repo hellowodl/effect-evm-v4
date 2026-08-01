@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-export class SubscriptionNotSupportedError extends Schema.TaggedError<SubscriptionNotSupportedError>()(
+export class SubscriptionNotSupportedError extends Schema.TaggedErrorClass<SubscriptionNotSupportedError>()(
   "SubscriptionNotSupportedError",
   {
     chainId: Schema.Number,
@@ -9,7 +9,7 @@ export class SubscriptionNotSupportedError extends Schema.TaggedError<Subscripti
   }
 ) {}
 
-export class SubscriptionDroppedError extends Schema.TaggedError<SubscriptionDroppedError>()(
+export class SubscriptionDroppedError extends Schema.TaggedErrorClass<SubscriptionDroppedError>()(
   "SubscriptionDroppedError",
   {
     chainId: Schema.Number,

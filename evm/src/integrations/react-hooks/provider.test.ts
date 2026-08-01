@@ -51,10 +51,7 @@ describe("react-hooks provider", () => {
     };
 
     const { cleanup } = render(
-      React.createElement(EffectEvmProviderSync, {
-        children: React.createElement(Probe),
-        layer: Layer.empty,
-      })
+      React.createElement(EffectEvmProviderSync, { layer: Layer.empty }, React.createElement(Probe))
     );
 
     await act(async () => {
@@ -78,10 +75,7 @@ describe("react-hooks provider", () => {
     };
 
     const { cleanup } = render(
-      React.createElement(EffectEvmLayerProvider, {
-        children: React.createElement(Probe),
-        layer,
-      })
+      React.createElement(EffectEvmLayerProvider, { layer }, React.createElement(Probe))
     );
 
     await act(async () => {
@@ -108,10 +102,7 @@ describe("useEffectMemoFactory", () => {
     };
 
     const { cleanup } = render(
-      React.createElement(EffectEvmProviderSync, {
-        children: React.createElement(Probe),
-        layer: Layer.empty,
-      })
+      React.createElement(EffectEvmProviderSync, { layer: Layer.empty }, React.createElement(Probe))
     );
 
     await act(async () => {

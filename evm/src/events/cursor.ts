@@ -1,4 +1,4 @@
-import { Context, Effect, Layer, Ref, Stream } from "effect";
+import { Clock, Context, Effect, Layer, Ref, Stream } from "effect";
 import type { Abi } from "viem";
 import type { ClientNotFoundError, EventWatchError } from "#src/core/index.js";
 import { EventBackfillError, PublicClientService } from "#src/core/index.js";
@@ -29,7 +29,7 @@ export type CursorStorage = {
   readonly delete: (key: string) => Effect.Effect<void, CursorStoreError>;
 };
 
-export class CursorStore extends Context.Tag("ew3/CursorStore")<CursorStore, CursorStorage>() {}
+export class CursorStore extends Context.Service<CursorStore, CursorStorage>()("ew3/CursorStore") {}
 
 export const InMemoryCursorStoreLive = Layer.effect(
   CursorStore,
@@ -111,10 +111,9 @@ export type CursorStreamShape = {
   >;
 };
 
-export class CursorStream extends Context.Tag("ew3/CursorStream")<
-  CursorStream,
-  CursorStreamShape
->() {}
+export class CursorStream extends Context.Service<CursorStream, CursorStreamShape>()(
+  "ew3/CursorStream"
+) {}
 
 export const CursorStreamLive = Layer.effect(
   CursorStream,
@@ -131,14 +130,18 @@ export const CursorStreamLive = Layer.effect(
       params: { address?: string; chainId: number; eventName: string; cursorKey: string },
       event: Pick<DecodedEvent, "blockNumber" | "logIndex">
     ) =>
-      cursorStore.set(params.cursorKey, {
-        address: params.address?.toLowerCase() ?? "",
-        chainId: params.chainId,
-        eventName: params.eventName,
-        lastBlockNumber: event.blockNumber,
-        lastLogIndex: event.logIndex,
-        updatedAt: Date.now(),
-      });
+      Clock.currentTimeMillis.pipe(
+        Effect.flatMap((updatedAt) =>
+          cursorStore.set(params.cursorKey, {
+            address: params.address?.toLowerCase() ?? "",
+            chainId: params.chainId,
+            eventName: params.eventName,
+            lastBlockNumber: event.blockNumber,
+            lastLogIndex: event.logIndex,
+            updatedAt,
+          })
+        )
+      );
 
     // Drop events at or before the cursor position. Resume is inclusive of the
     // cursor block, so this evicts only the events already delivered while

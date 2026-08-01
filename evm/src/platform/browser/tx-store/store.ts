@@ -1,4 +1,14 @@
-import { Context, Effect, Layer, Option, Ref, Stream, SubscriptionRef } from "effect";
+import {
+  Clock,
+  Context,
+  Effect,
+  Filter,
+  Layer,
+  Option,
+  Ref,
+  Stream,
+  SubscriptionRef,
+} from "effect";
 import type { TxStoreError } from "./errors.js";
 import type { PersistedTx, TxStoreChange } from "./types.js";
 import { isInFlightPersistedTx } from "./types.js";
@@ -48,7 +58,7 @@ export type TxStoreShape = {
 /**
  * Context tag for the TxStore service.
  */
-export class TxStore extends Context.Tag("ew3/TxStore")<TxStore, TxStoreShape>() {}
+export class TxStore extends Context.Service<TxStore, TxStoreShape>()("ew3/TxStore") {}
 
 /**
  * In-memory implementation of TxStore using a Ref-based Map.
@@ -65,7 +75,10 @@ export const InMemoryTxStoreLive = Layer.effect(
       Array.from(map.values()).filter(isInFlightPersistedTx);
 
     return TxStore.of({
-      changes: Stream.filterMap(changesRef.changes, (change) => change),
+      changes: Stream.filterMap(
+        SubscriptionRef.changes(changesRef),
+        Filter.fromPredicateOption((change) => change)
+      ),
 
       delete: (id: string) =>
         Effect.gen(function* () {
@@ -76,12 +89,13 @@ export const InMemoryTxStoreLive = Layer.effect(
             return [[existing, newMap] as const, newMap] as const;
           });
 
+          const at = yield* Clock.currentTimeMillis;
           yield* SubscriptionRef.set(inFlightRef, toInFlight(nextMap));
           yield* SubscriptionRef.set(
             changesRef,
             Option.some({
               _tag: "delete",
-              at: Date.now(),
+              at,
               id,
               previous,
             } satisfies TxStoreChange)
@@ -114,19 +128,20 @@ export const InMemoryTxStoreLive = Layer.effect(
             return [[existing, newMap] as const, newMap] as const;
           });
 
+          const at = yield* Clock.currentTimeMillis;
           yield* SubscriptionRef.set(inFlightRef, toInFlight(nextMap));
           yield* SubscriptionRef.set(
             changesRef,
             Option.some({
               _tag: "upsert",
-              at: Date.now(),
+              at,
               next: tx,
               previous,
             } satisfies TxStoreChange)
           );
         }),
 
-      watchInFlight: () => inFlightRef.changes,
+      watchInFlight: () => SubscriptionRef.changes(inFlightRef),
     });
   })
 );

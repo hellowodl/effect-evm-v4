@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@effect/vitest";
-import { ConfigProvider, Effect, Exit, Fiber, Layer, TestClock } from "effect";
+import { ConfigProvider, Effect, Exit, Fiber } from "effect";
+import { TestClock } from "effect/testing";
 import {
   defaultRetryableErrors,
   isRetryableError,
@@ -14,7 +15,7 @@ describe("retry", () => {
     adjust: Parameters<typeof TestClock.adjust>[0] = "1000 millis"
   ) =>
     Effect.gen(function* () {
-      const fiber = yield* Effect.fork(effect);
+      const fiber = yield* Effect.forkChild(effect);
       yield* TestClock.adjust(adjust);
       return yield* Fiber.join(fiber);
     });
@@ -290,16 +291,15 @@ describe("retry", () => {
         expect(config.jitter).toBe(false);
       }).pipe(
         Effect.provide(
-          Layer.setConfigProvider(
-            ConfigProvider.fromMap(
-              new Map([
-                ["EW3_RETRY_MAX_RETRIES", "5"],
-                ["EW3_RETRY_BASE_DELAY", "200"],
-                ["EW3_RETRY_MAX_DELAY", "20000"],
-                ["EW3_RETRY_JITTER", "false"],
-              ]),
-              { pathDelim: "_" }
-            )
+          ConfigProvider.layer(
+            ConfigProvider.fromEnv({
+              env: {
+                EW3_RETRY_BASE_DELAY: "200",
+                EW3_RETRY_JITTER: "false",
+                EW3_RETRY_MAX_DELAY: "20000",
+                EW3_RETRY_MAX_RETRIES: "5",
+              },
+            })
           )
         )
       )
@@ -315,14 +315,13 @@ describe("retry", () => {
         expect(config.jitter).toBe(true); // default
       }).pipe(
         Effect.provide(
-          Layer.setConfigProvider(
-            ConfigProvider.fromMap(
-              new Map([
-                ["EW3_RETRY_MAX_RETRIES", "10"],
+          ConfigProvider.layer(
+            ConfigProvider.fromEnv({
+              env: {
+                EW3_RETRY_MAX_RETRIES: "10",
                 // Other values should use defaults
-              ]),
-              { pathDelim: "_" }
-            )
+              },
+            })
           )
         )
       )

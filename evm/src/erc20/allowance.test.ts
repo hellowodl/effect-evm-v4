@@ -35,7 +35,7 @@ const makeDepsLayer = (calls: Call[], readResult = 123n) =>
       ContractReader,
       ContractReader.of({
         multicall: (() =>
-          Effect.dieMessage("unused")) as unknown as ContractReaderShape["multicall"],
+          Effect.die(new Error("unused"))) as unknown as ContractReaderShape["multicall"],
         read: ((params: unknown) => {
           calls.push({ kind: "read", params });
           return Effect.succeed(readResult);
@@ -46,7 +46,7 @@ const makeDepsLayer = (calls: Call[], readResult = 123n) =>
       ContractWriter,
       ContractWriter.of({
         estimateGas: (() =>
-          Effect.dieMessage("unused")) as unknown as ContractWriterShape["estimateGas"],
+          Effect.die(new Error("unused"))) as unknown as ContractWriterShape["estimateGas"],
         simulate: ((params: unknown) => {
           calls.push({ kind: "simulate", params });
           return Effect.succeed({ request: {}, result: true });
@@ -163,16 +163,18 @@ describe("ERC-20 Allowance Services", () => {
                 ContractReader,
                 ContractReader.of({
                   multicall: (() =>
-                    Effect.dieMessage("unused")) as unknown as ContractReaderShape["multicall"],
+                    Effect.die(new Error("unused"))) as unknown as ContractReaderShape["multicall"],
                   read: (() =>
-                    Effect.dieMessage("unused")) as unknown as ContractReaderShape["read"],
+                    Effect.die(new Error("unused"))) as unknown as ContractReaderShape["read"],
                 } satisfies ContractReaderShape)
               ),
               Layer.succeed(
                 ContractWriter,
                 ContractWriter.of({
                   estimateGas: (() =>
-                    Effect.dieMessage("unused")) as unknown as ContractWriterShape["estimateGas"],
+                    Effect.die(
+                      new Error("unused")
+                    )) as unknown as ContractWriterShape["estimateGas"],
                   simulate: (() =>
                     Effect.fail(
                       new SimulationFailedError({
@@ -183,7 +185,9 @@ describe("ERC-20 Allowance Services", () => {
                       })
                     )) as unknown as ContractWriterShape["simulate"],
                   write: (() =>
-                    Effect.dieMessage("unreachable")) as unknown as ContractWriterShape["write"],
+                    Effect.die(
+                      new Error("unreachable")
+                    )) as unknown as ContractWriterShape["write"],
                 } satisfies ContractWriterShape)
               )
             )
@@ -224,7 +228,7 @@ describe("ERC-20 Allowance Services", () => {
                 ContractReader,
                 ContractReader.of({
                   multicall: (() =>
-                    Effect.dieMessage("unused")) as unknown as ContractReaderShape["multicall"],
+                    Effect.die(new Error("unused"))) as unknown as ContractReaderShape["multicall"],
                   read: (() =>
                     Effect.fail(
                       new ContractReadError({
@@ -239,11 +243,13 @@ describe("ERC-20 Allowance Services", () => {
                 ContractWriter,
                 ContractWriter.of({
                   estimateGas: (() =>
-                    Effect.dieMessage("unused")) as unknown as ContractWriterShape["estimateGas"],
+                    Effect.die(
+                      new Error("unused")
+                    )) as unknown as ContractWriterShape["estimateGas"],
                   simulate: (() =>
-                    Effect.dieMessage("unused")) as unknown as ContractWriterShape["simulate"],
+                    Effect.die(new Error("unused"))) as unknown as ContractWriterShape["simulate"],
                   write: (() =>
-                    Effect.dieMessage("unused")) as unknown as ContractWriterShape["write"],
+                    Effect.die(new Error("unused"))) as unknown as ContractWriterShape["write"],
                 } satisfies ContractWriterShape)
               )
             )
@@ -323,7 +329,7 @@ describe("ERC-20 Allowance Services", () => {
               ContractReader,
               ContractReader.of({
                 multicall: (() =>
-                  Effect.dieMessage("unused")) as unknown as ContractReaderShape["multicall"],
+                  Effect.die(new Error("unused"))) as unknown as ContractReaderShape["multicall"],
                 read: ((params: unknown) => {
                   calls.push({ kind: "read", params });
                   return Effect.succeed(1n);
@@ -334,7 +340,7 @@ describe("ERC-20 Allowance Services", () => {
               ContractWriter,
               ContractWriter.of({
                 estimateGas: (() =>
-                  Effect.dieMessage("unused")) as unknown as ContractWriterShape["estimateGas"],
+                  Effect.die(new Error("unused"))) as unknown as ContractWriterShape["estimateGas"],
                 simulate: ((params: unknown) => {
                   calls.push({ kind: "simulate", params });
                   const amount = (params as { args?: readonly unknown[] }).args?.[1] as
@@ -403,7 +409,7 @@ describe("ERC-20 Allowance Services", () => {
               ContractReader,
               ContractReader.of({
                 multicall: (() =>
-                  Effect.dieMessage("unused")) as unknown as ContractReaderShape["multicall"],
+                  Effect.die(new Error("unused"))) as unknown as ContractReaderShape["multicall"],
                 read: ((params: unknown) => {
                   calls.push({ kind: "read", params });
                   // Non-zero existing allowance: without the fix, the zero-first
@@ -416,14 +422,14 @@ describe("ERC-20 Allowance Services", () => {
               ContractWriter,
               ContractWriter.of({
                 estimateGas: (() =>
-                  Effect.dieMessage("unused")) as unknown as ContractWriterShape["estimateGas"],
+                  Effect.die(new Error("unused"))) as unknown as ContractWriterShape["estimateGas"],
                 simulate: ((params: unknown) => {
                   calls.push({ kind: "simulate", params });
                   return Effect.fail(new UserRejectedError({ message: "user rejected" }));
                 }) as unknown as ContractWriterShape["simulate"],
                 write: ((params: unknown) => {
                   calls.push({ kind: "write", params });
-                  return Effect.dieMessage("write must not run after rejection");
+                  return Effect.die(new Error("write must not run after rejection"));
                 }) as unknown as ContractWriterShape["write"],
               } satisfies ContractWriterShape)
             )
@@ -500,7 +506,7 @@ describe("ERC-20 Allowance Services", () => {
           ContractReader,
           ContractReader.of({
             multicall: (() =>
-              Effect.dieMessage("unused")) as unknown as ContractReaderShape["multicall"],
+              Effect.die(new Error("unused"))) as unknown as ContractReaderShape["multicall"],
             read: ((params: unknown) => {
               calls.push({ kind: "read", params });
               return Effect.succeed(1n);
@@ -511,7 +517,7 @@ describe("ERC-20 Allowance Services", () => {
           ContractWriter,
           ContractWriter.of({
             estimateGas: (() =>
-              Effect.dieMessage("unused")) as unknown as ContractWriterShape["estimateGas"],
+              Effect.die(new Error("unused"))) as unknown as ContractWriterShape["estimateGas"],
             simulate: ((params: unknown) => {
               calls.push({ kind: "simulate", params });
               return Effect.succeed({ request: {}, result: true });
@@ -534,11 +540,11 @@ describe("ERC-20 Allowance Services", () => {
             spender: TEST_ADDRESS_2,
             tokenAddress: TEST_ADDRESS,
           })
-          .pipe(Effect.either);
+          .pipe(Effect.result);
 
-        expect(result._tag).toBe("Left");
-        if (result._tag === "Left") {
-          expect(result.left._tag).toBe("TransactionSubmissionError");
+        expect(result._tag).toBe("Failure");
+        if (result._tag === "Failure") {
+          expect(result.failure._tag).toBe("TransactionSubmissionError");
         }
         expect(calls.map((call) => call.kind)).toEqual(["read", "simulate", "write"]);
       }).pipe(Effect.provide(Layer.provide(Erc20NoOutputAllowanceServiceLive, deps)));

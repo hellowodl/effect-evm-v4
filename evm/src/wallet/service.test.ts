@@ -39,7 +39,7 @@ describe("WalletService", () => {
 
         expect(Exit.isFailure(exit)).toBe(true);
         if (Exit.isFailure(exit)) {
-          const error = Cause.failureOption(exit.cause);
+          const error = Cause.findErrorOption(exit.cause);
           if (error._tag === "Some") {
             expect(error.value._tag).toBe("AccountNotConnectedError");
             expect(error.value.message).toBe("No wallet account connected");
@@ -92,7 +92,7 @@ describe("WalletService", () => {
 
         expect(Exit.isFailure(exit)).toBe(true);
         if (Exit.isFailure(exit)) {
-          const error = Cause.failureOption(exit.cause);
+          const error = Cause.findErrorOption(exit.cause);
           if (error._tag === "Some") {
             expect(error.value._tag).toBe("AccountNotConnectedError");
           }
@@ -142,6 +142,30 @@ describe("WalletService", () => {
         )
       )
     );
+
+    it.effect("propagates synchronous provider setup defects", () => {
+      const setupError = new Error("provider setup failed");
+      return Effect.gen(function* () {
+        const service = yield* WalletService;
+        const accountsStream = yield* service.accounts;
+        const exit = yield* Stream.runHead(accountsStream).pipe(Effect.exit);
+
+        expect(Exit.hasDies(exit)).toBe(true);
+        if (Exit.isFailure(exit)) {
+          expect(Cause.squash(exit.cause)).toBe(setupError);
+        }
+      }).pipe(
+        Effect.provide(
+          makeWalletServiceLive(
+            makeMockWalletProvider({
+              request: () => {
+                throw setupError;
+              },
+            })
+          )
+        )
+      );
+    });
   });
 
   describe("chainId stream", () => {

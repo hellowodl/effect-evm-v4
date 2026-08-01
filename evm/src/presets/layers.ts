@@ -1,5 +1,5 @@
-import { FetchHttpClient } from "@effect/platform";
 import { Effect, Layer, Option } from "effect";
+import { FetchHttpClient } from "effect/unstable/http";
 import type { Chain, PublicClient, Transport, WalletClient } from "viem";
 import {
   BaseError,
@@ -585,7 +585,7 @@ export function makeWalletClientLayerFromProviderRef(
 }
 
 /**
- * Compose all effect-evm services into a single layer
+ * Compose all effect-evm-v4 services into a single layer
  * Requires PublicClientService and WalletClientService to be provided
  * Note: WalletService and WalletLifecycle require a provider and should be added via makeEffectEvmLayer
  */
@@ -610,7 +610,7 @@ const baseServices = Layer.mergeAll(
 );
 
 /**
- * Create effect-evm services with an optional custom TxPolicy.
+ * Create effect-evm-v4 services with an optional custom TxPolicy.
  * Use this when you need to customize receipt timeout or other tx settings.
  */
 export function makeEffectEvmServices(txPolicy?: TxPolicy) {
@@ -642,11 +642,11 @@ export function makeEffectEvmServices(txPolicy?: TxPolicy) {
   ).pipe(Layer.provide(FetchHttpClient.layer));
 }
 
-/** Default effect-evm services with standard TxPolicy. */
+/** Default effect-evm-v4 services with standard TxPolicy. */
 export const effectEvmServices = makeEffectEvmServices();
 
 /**
- * Create a complete effect-evm layer from chain configurations and provider
+ * Create a complete effect-evm-v4 layer from chain configurations and provider
  */
 export function makeEffectEvmLayer(
   configs: ChainConfig[],
@@ -700,7 +700,7 @@ export function makeEffectEvmLayer(
 }
 
 /**
- * Create a complete effect-evm layer with a dynamic wallet provider reference.
+ * Create a complete effect-evm-v4 layer with a dynamic wallet provider reference.
  *
  * This is intended for frontends (e.g. Next.js) that want a stable Effect runtime
  * while the wallet provider changes over time.

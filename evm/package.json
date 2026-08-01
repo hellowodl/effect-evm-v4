@@ -1,12 +1,12 @@
 {
-  "name": "@prb/effect-evm",
-  "description": "Effect-TS integration for Ethereum Virtual Machine (EVM) frontend development",
-  "homepage": "https://github.com/PaulRBerg/prb-effect/tree/main/evm#readme",
+  "name": "effect-evm-v4",
+  "description": "Effect v4 integration for Ethereum Virtual Machine (EVM) frontend development",
+  "homepage": "https://github.com/hellowodl/effect-evm-v4/tree/main/evm#readme",
   "main": "./dist/index.js",
   "sideEffects": false,
   "type": "module",
   "types": "./dist/index.d.ts",
-  "version": "3.0.0",
+  "version": "0.1.0",
   "scripts": {
     "build": "just build",
     "prepack": "bun install --frozen-lockfile && just build"
@@ -15,33 +15,38 @@
     "name": "Paul Razvan Berg",
     "url": "https://github.com/PaulRBerg"
   },
+  "contributors": [
+    {
+      "name": "Maximiliaan van Dijk",
+      "url": "https://github.com/hellowodl"
+    }
+  ],
   "license": "MIT",
   "repository": {
     "directory": "evm",
     "type": "git",
-    "url": "git+https://github.com/PaulRBerg/prb-effect.git"
+    "url": "git+https://github.com/hellowodl/effect-evm-v4.git"
   },
   "bugs": {
-    "url": "https://github.com/PaulRBerg/prb-effect/issues"
+    "url": "https://github.com/hellowodl/effect-evm-v4/issues"
   },
   "devDependencies": {
-    "@biomejs/biome": "catalog:dev",
-    "@effect/platform": "catalog:effect",
-    "@effect/vitest": "catalog:dev",
-    "@prb/devkit": "catalog:dev",
-    "@types/node": "catalog:dev",
-    "@types/react": "catalog:dev",
-    "@types/react-dom": "catalog:dev",
-    "@typescript/native-preview": "catalog:dev",
-    "@vitest/ui": "catalog:dev",
+    "@biomejs/biome": "^2.5.0",
+    "@effect/vitest": "4.0.0-beta.102",
+    "@prb/devkit": "^1.0.0",
+    "@types/node": "^25.0.2",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@typescript/native-preview": "^7.0.0-dev.20260118.1",
+    "@vitest/ui": "^4.1.10",
     "@wagmi/core": "^2.22.1",
-    "effect": "catalog:effect",
-    "jsdom": "catalog:dev",
-    "react": "catalog:",
-    "react-dom": "catalog:",
-    "typescript": "catalog:dev",
+    "effect": "4.0.0-beta.102",
+    "jsdom": "^24.1.3",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "typescript": "^5.9.3",
     "viem": "^2.43.1",
-    "vitest": "catalog:dev",
+    "vitest": "^4.1.10",
     "wagmi": "^2.19.5"
   },
   "exports": {
@@ -50,6 +55,13 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./package.json": "./package.json",
+    "./react-hooks/convenience": {
+      "types": "./dist/integrations/react-hooks/convenience/index.d.ts",
+      "import": "./dist/integrations/react-hooks/convenience/index.js",
+      "default": "./dist/integrations/react-hooks/convenience/index.js"
+    },
+    "./internal": null,
     "./internal/*": null,
     "./*": {
       "types": "./dist/*/index.d.ts",
@@ -60,7 +72,11 @@
   "files": [
     "dist/**",
     "CHANGELOG.md",
-    "DOCS.md"
+    "DOCS.md",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "banner.png"
   ],
   "keywords": [
     "effect",
@@ -74,12 +90,12 @@
     "web3"
   ],
   "peerDependencies": {
-    "@effect/platform": "catalog:peers",
-    "@wagmi/core": "catalog:peers",
-    "effect": "catalog:peers",
-    "react": "catalog:peers",
-    "react-dom": "catalog:peers",
-    "viem": "catalog:peers"
+    "@wagmi/core": ">=2.0.0",
+    "effect": "^4.0.0-beta.102",
+    "react": ">=18.2.0",
+    "react-dom": ">=18.2.0",
+    "viem": "^2.43",
+    "vitest": ">=4.1.0"
   },
   "peerDependenciesMeta": {
     "@wagmi/core": {
@@ -90,15 +106,16 @@
     },
     "react-dom": {
       "optional": true
+    },
+    "vitest": {
+      "optional": true
     }
   },
   "imports": {
-    "#src/*": {
-      "source": "./src/*",
-      "default": "./dist/*"
-    }
+    "#src/*": "./dist/*"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   }
 }

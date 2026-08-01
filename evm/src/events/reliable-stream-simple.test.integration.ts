@@ -1,7 +1,8 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Effect, Exit, Layer, Stream } from "effect";
+import { Cause, Effect, Exit, Layer, Stream } from "effect";
 import { erc20Abi } from "viem";
 import type { EventWatchError } from "#src/core/index.js";
+import { ClientNotFoundError } from "#src/core/index.js";
 import type { DecodedEvent } from "#src/events/index.js";
 import { EventStream, ReliableEventStream, ReliableEventStreamLive } from "#src/events/index.js";
 import {
@@ -20,11 +21,11 @@ describe("ReliableEventStream - Simple", () => {
             decodeReceipt: () => Effect.succeed([]),
             watch: () =>
               Effect.succeed(
-                Stream.async<DecodedEvent<typeof erc20Abi, "Transfer">, EventWatchError>(
+                Stream.callback<DecodedEvent<typeof erc20Abi, "Transfer">, EventWatchError>(
                   () => Effect.void
                 )
               ),
-          } as EventStream["Type"]),
+          } as EventStream["Service"]),
           makeMockPublicClientLayer()
         )
       );
@@ -40,6 +41,13 @@ describe("ReliableEventStream - Simple", () => {
       );
 
       expect(Exit.isFailure(exit)).toBe(true);
+      if (Exit.isFailure(exit)) {
+        const error = Cause.findErrorOption(exit.cause);
+        expect(error._tag).toBe("Some");
+        if (error._tag === "Some") {
+          expect(error.value).toBeInstanceOf(ClientNotFoundError);
+        }
+      }
     })
   );
 });

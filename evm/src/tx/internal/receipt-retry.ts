@@ -55,7 +55,8 @@ function isReceiptRetryable(cause: unknown): boolean {
 
 export const makeReceiptRetrySchedule = () =>
   makeBackoffSchedule({ baseDelay: 1000, jitter: true, maxRetries: 3 }).pipe(
-    Schedule.whileInput<TxFailedError | ReceiptTimeoutError | TxReplacedError>((error) => {
+    Schedule.setInputType<TxFailedError | ReceiptTimeoutError | TxReplacedError>(),
+    Schedule.while(({ input: error }) => {
       // Only retry TxFailedError with retryable cause - not timeouts or replacements
       if (error._tag === "TxFailedError" && error.cause) {
         return isReceiptRetryable(error.cause);

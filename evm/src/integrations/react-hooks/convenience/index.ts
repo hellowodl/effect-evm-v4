@@ -5,6 +5,7 @@ import * as Fiber from "effect/Fiber";
 import { constVoid as noop } from "effect/Function";
 import * as Scope from "effect/Scope";
 import * as Stream from "effect/Stream";
+import * as SubscriptionRef from "effect/SubscriptionRef";
 import * as React from "react";
 import type * as Abi_ from "viem";
 import type {
@@ -130,9 +131,9 @@ export const useWriteAndTrack = <
   const [terminal, setTerminal] = React.useState<
     UseEffectResult<WriteAndTrackTerminal<TAbi>, WriteAndTrackError>
   >({ status: "idle" });
-  const [stateRef, setStateRef] = React.useState<
-    import("effect/SubscriptionRef").SubscriptionRef<TxState> | null
-  >(null);
+  const [stateRef, setStateRef] = React.useState<SubscriptionRef.SubscriptionRef<TxState> | null>(
+    null
+  );
 
   React.useEffect(
     () => () => {
@@ -159,7 +160,7 @@ export const useWriteAndTrack = <
         return yield* pipeline.writeAndTrack(params);
       });
 
-      const started = await runtime.runPromise(Scope.extend(scoped.scope)(start));
+      const started = await runtime.runPromise(Scope.provide(scoped.scope)(start));
       if (runIdRef.current !== runId) {
         scoped.close();
         return;
@@ -168,10 +169,10 @@ export const useWriteAndTrack = <
       setStateRef(started.stateRef);
       setActions({
         cancel: () => {
-          runtime.runPromise(Scope.extend(scoped.scope)(started.actions.cancel())).catch(noop);
+          runtime.runPromise(Scope.provide(scoped.scope)(started.actions.cancel())).catch(noop);
         },
         speedup: () => {
-          runtime.runPromise(Scope.extend(scoped.scope)(started.actions.speedup())).catch(noop);
+          runtime.runPromise(Scope.provide(scoped.scope)(started.actions.speedup())).catch(noop);
         },
       });
 
@@ -203,7 +204,7 @@ export const useWriteAndTrack = <
   }, [params, runtime]);
 
   const stateStream = React.useMemo(
-    () => (stateRef ? stateRef.changes : Stream.succeed(initialTxState)),
+    () => (stateRef ? SubscriptionRef.changes(stateRef) : Stream.succeed(initialTxState)),
     [stateRef]
   );
   const streamState = useStream(stateStream, { initial: initialTxState });

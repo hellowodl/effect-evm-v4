@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 
 /** Token allowance check failed */
-export class ApprovalCheckError extends Schema.TaggedError<ApprovalCheckError>()(
+export class ApprovalCheckError extends Schema.TaggedErrorClass<ApprovalCheckError>()(
   "ApprovalCheckError",
   {
     cause: Schema.optional(Schema.Unknown),
@@ -13,7 +13,7 @@ export class ApprovalCheckError extends Schema.TaggedError<ApprovalCheckError>()
 ) {}
 
 /** Token approval transaction failed */
-export class ApprovalError extends Schema.TaggedError<ApprovalError>()("ApprovalError", {
+export class ApprovalError extends Schema.TaggedErrorClass<ApprovalError>()("ApprovalError", {
   cause: Schema.optional(Schema.Unknown),
   message: Schema.String,
   spender: Schema.String,

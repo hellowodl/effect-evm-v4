@@ -37,7 +37,7 @@ export const EffectEvmProvider = (props: EffectEvmProviderProps): React.ReactEle
       current = built;
 
       if (cancelled) {
-        await closeRuntime(built.scope);
+        await closeRuntime(built);
         return;
       }
 
@@ -49,7 +49,7 @@ export const EffectEvmProvider = (props: EffectEvmProviderProps): React.ReactEle
     return () => {
       cancelled = true;
       if (current) {
-        closeRuntime(current.scope).catch(noop);
+        closeRuntime(current).catch(noop);
       }
     };
   }, [layer, onUnhandledError]);
@@ -75,7 +75,7 @@ export const EffectEvmProviderSync = (props: EffectEvmProviderProps): React.Reac
 
   React.useEffect(
     () => () => {
-      void closeRuntime(runtime.scope).catch(noop);
+      void closeRuntime(runtime).catch(noop);
     },
     [runtime]
   );

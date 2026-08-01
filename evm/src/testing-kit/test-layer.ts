@@ -1,5 +1,5 @@
-import { FetchHttpClient } from "@effect/platform";
 import { Layer } from "effect";
+import { FetchHttpClient } from "effect/unstable/http";
 import { mainnet } from "viem/chains";
 import type { BalanceService } from "#src/balance/index.js";
 import { BalanceServiceLive } from "#src/balance/index.js";
@@ -175,9 +175,9 @@ const applicationServices = Layer.provideMerge(
 ).pipe(Layer.provide(FetchHttpClient.layer));
 
 /**
- * Creates a complete effect-evm test layer with mocked boundaries
+ * Creates a complete effect-evm-v4 test layer with mocked boundaries
  *
- * This layer provides all effect-evm services with mocked PublicClientService
+ * This layer provides all effect-evm-v4 services with mocked PublicClientService
  * and WalletClientService boundaries. The mock boundaries use sensible defaults
  * that can be overridden via configuration.
  *
@@ -185,14 +185,14 @@ const applicationServices = Layer.provideMerge(
  * with controlled network boundaries.
  *
  * @param config - Optional configuration to customize mock behaviors
- * @returns A Layer providing all effect-evm services
+ * @returns A Layer providing all effect-evm-v4 services
  *
  * @example
  * ```typescript
  * import { describe, expect, it } from "@effect/vitest";
  * import { Effect, Layer } from "effect";
- * import { ContractReader } from "effect-evm";
- * import { makeEffectEvmTestLayer } from "effect-evm/testing-kit";
+ * import { ContractReader } from "effect-evm-v4";
+ * import { makeEffectEvmTestLayer } from "effect-evm-v4/testing-kit";
  *
  * describe("MyFeature", () => {
  *   const testLayer = makeEffectEvmTestLayer({

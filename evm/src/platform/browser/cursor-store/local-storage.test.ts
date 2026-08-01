@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Effect, Fiber, Layer, TestClock } from "effect";
+import { Effect, Fiber, Layer } from "effect";
+import { TestClock } from "effect/testing";
 import type { StreamCursor } from "#src/events/index.js";
 import { CursorStore } from "#src/events/index.js";
 import { LocalStorageCursorStoreLive } from "#src/platform/browser/cursor-store/index.js";
@@ -49,7 +50,7 @@ const runWithTime = <A, E, R>(
   adjust: Parameters<typeof TestClock.adjust>[0] = "300 millis"
 ) =>
   Effect.gen(function* () {
-    const fiber = yield* Effect.fork(effect);
+    const fiber = yield* Effect.forkChild(effect);
     yield* TestClock.adjust(adjust);
     return yield* Fiber.join(fiber);
   });
@@ -466,7 +467,7 @@ describe("LocalStorageCursorStore", () => {
         remove: (key: string) => Effect.sync(() => mockStorage.removeItem(key)),
         set: (key: string, value: string) =>
           Effect.sleep("100 millis").pipe(
-            Effect.zipRight(Effect.sync(() => mockStorage.setItem(key, value)))
+            Effect.andThen(Effect.sync(() => mockStorage.setItem(key, value)))
           ),
       })
     );

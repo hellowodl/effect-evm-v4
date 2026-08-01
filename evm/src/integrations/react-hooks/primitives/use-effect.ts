@@ -43,7 +43,7 @@ export const useEffectOnce = <A, E, R>(
       // biome-ignore lint/suspicious/noConsole: Dev-only warning for non-reactive input changes.
       console.warn(
         [
-          "[effect-evm] useEffectOnce ignores changes after the first render.",
+          "[effect-evm-v4] useEffectOnce ignores changes after the first render.",
           "Memoize inputs or switch to useEffectMemo for reactive effects.",
         ].join(" ")
       );

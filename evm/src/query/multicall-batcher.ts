@@ -1,4 +1,4 @@
-import { Context, Effect, Layer, Request, RequestResolver } from "effect";
+import { Context, Effect, Layer, Request, RequestResolver, Result } from "effect";
 import type { ContractReaderShape } from "#src/contract/index.js";
 import { ContractReader } from "#src/contract/index.js";
 import type { MulticallCall } from "#src/types/index.js";
@@ -31,50 +31,22 @@ const keyFor = (chainId: number, options?: MulticallBatchOptions | undefined): s
   `${chainId}:${stableStringify(options ?? {})}`;
 
 type RequestGroup = {
-  chainId: number;
-  options?: MulticallBatchOptions | undefined;
-  requests: readonly MulticallRequest[];
-};
-
-/**
- * Group requests by chainId and block options.
- */
-const groupRequests = (requests: readonly MulticallRequest[]): Map<string, RequestGroup> => {
-  const grouped = new Map<string, RequestGroup>();
-
-  for (const req of requests) {
-    const key = keyFor(req.chainId, req.options);
-    const existing = grouped.get(key);
-    if (existing) {
-      grouped.set(key, {
-        ...existing,
-        requests: [...existing.requests, req],
-      });
-    } else {
-      grouped.set(key, {
-        chainId: req.chainId,
-        options: req.options,
-        requests: [req],
-      });
-    }
-  }
-
-  return grouped;
+  readonly chainId: number;
+  readonly entries: readonly Request.Entry<MulticallRequest>[];
+  readonly options?: MulticallBatchOptions | undefined;
 };
 
 /**
  * Complete all requests in a group with a failure.
  */
-const failGroup = (requests: readonly MulticallRequest[], error: Error) =>
-  Effect.forEach(requests, (req) => Request.completeEffect(req, Effect.fail(error)), {
-    discard: true,
-  });
+const failGroup = (entries: readonly Request.Entry<MulticallRequest>[], error: Error) =>
+  Effect.forEach(entries, (entry) => Request.fail(entry, error), { discard: true });
 
 /**
  * Complete all requests in a group with their corresponding results.
  */
 const completeGroup = (
-  requests: readonly MulticallRequest[],
+  entries: readonly Request.Entry<MulticallRequest>[],
   results: readonly {
     status: "success" | "failure";
     result?: unknown;
@@ -82,16 +54,13 @@ const completeGroup = (
   }[]
 ) =>
   Effect.forEach(
-    requests,
-    (req, i) => {
+    entries,
+    (entry, i) => {
       const res = results[i];
       if (res?.status === "success") {
-        return Request.completeEffect(req, Effect.succeed(res.result));
+        return Request.succeed(entry, res.result);
       }
-      return Request.completeEffect(
-        req,
-        Effect.fail(res?.error ?? new Error("Unknown multicall error"))
-      );
+      return Request.fail(entry, res?.error ?? new Error("Unknown multicall error"));
     },
     { discard: true }
   );
@@ -104,16 +73,17 @@ const executeGroup = (contractReader: ContractReaderShape, group: RequestGroup) 
     const result = yield* contractReader
       .multicall(
         group.chainId,
-        group.requests.map((r) => r.call),
+        group.entries.map((entry) => entry.request.call),
         group.options
       )
-      .pipe(Effect.either);
+      .pipe(Effect.result);
 
-    if (result._tag === "Left") {
-      const error = result.left instanceof Error ? result.left : new Error(String(result.left));
-      yield* failGroup(group.requests, error);
+    if (Result.isFailure(result)) {
+      const error =
+        result.failure instanceof Error ? result.failure : new Error(String(result.failure));
+      yield* failGroup(group.entries, error);
     } else {
-      yield* completeGroup(group.requests, result.right);
+      yield* completeGroup(group.entries, result.success);
     }
   });
 
@@ -122,18 +92,20 @@ const executeGroup = (contractReader: ContractReaderShape, group: RequestGroup) 
  */
 const makeMulticallResolver = (
   contractReader: ContractReaderShape
-): RequestResolver.RequestResolver<MulticallRequest, never> =>
-  RequestResolver.makeBatched((requests: readonly MulticallRequest[]) =>
-    Effect.gen(function* () {
-      const grouped = groupRequests(requests);
-
-      // Execute groups in parallel (cross-chain requests can run concurrently)
-      yield* Effect.all(
-        [...grouped.values()].map((group) => executeGroup(contractReader, group)),
-        { concurrency: "unbounded" }
-      );
-    })
-  ).pipe(RequestResolver.batchN(100));
+): RequestResolver.RequestResolver<MulticallRequest> =>
+  RequestResolver.makeWith<MulticallRequest>({
+    delay: Effect.yieldNow,
+    batchKey: (entry) => keyFor(entry.request.chainId, entry.request.options),
+    collectWhile: (entries) => entries.size < 100,
+    runAll: (entries) => {
+      const request = entries[0].request;
+      return executeGroup(contractReader, {
+        chainId: request.chainId,
+        entries,
+        options: request.options,
+      });
+    },
+  });
 
 export type MulticallBatcherShape = {
   readonly enqueue: <A>(
@@ -143,10 +115,9 @@ export type MulticallBatcherShape = {
   ) => Effect.Effect<A, Error>;
 };
 
-export class MulticallBatcher extends Context.Tag("ew3/MulticallBatcher")<
-  MulticallBatcher,
-  MulticallBatcherShape
->() {}
+export class MulticallBatcher extends Context.Service<MulticallBatcher, MulticallBatcherShape>()(
+  "ew3/MulticallBatcher"
+) {}
 
 /**
  * Live implementation of MulticallBatcher using Effect's Request/RequestResolver.

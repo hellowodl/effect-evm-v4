@@ -20,7 +20,13 @@
     }
   },
   "files": {
-    "includes": ["**/*.{js,json,jsonc,ts,tsx}", "!**/node_modules", "!**/dist"]
+    "includes": [
+      "**/*.{js,json,jsonc,ts,tsx}",
+      "!**/node_modules",
+      "!**/dist",
+      "!.direnv",
+      "!effect"
+    ]
   },
   "linter": {
     "rules": {

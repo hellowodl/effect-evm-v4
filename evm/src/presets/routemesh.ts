@@ -35,7 +35,7 @@ export type RouteMeshFallbackChainEntry = RouteMeshChainEntry & {
 
 // === Errors ===
 
-export class RouteMeshApiKeyMissingError extends Schema.TaggedError<RouteMeshApiKeyMissingError>()(
+export class RouteMeshApiKeyMissingError extends Schema.TaggedErrorClass<RouteMeshApiKeyMissingError>()(
   "RouteMeshApiKeyMissingError",
   {
     message: Schema.String,
@@ -81,7 +81,7 @@ export const routemeshRpc =
  * @example
  * ```ts
  * import { mainnet, arbitrum } from "viem/chains";
- * import { makePublicClientLayer, routemeshToChainConfigs } from "effect-evm";
+ * import { makePublicClientLayer, routemeshToChainConfigs } from "effect-evm-v4";
  *
  * const configs = routemeshToChainConfigs({
  *   apiKey: "my-api-key",
@@ -130,7 +130,7 @@ export const routemeshWithFallback = (
  * @example
  * ```ts
  * import { mainnet, arbitrum } from "viem/chains";
- * import { makeRouteMeshTransports } from "effect-evm";
+ * import { makeRouteMeshTransports } from "effect-evm-v4";
  *
  * const transports = makeRouteMeshTransports("my-api-key", [
  *   { chainId: mainnet.id, chain: mainnet, fallbackUrls: ["https://eth.llamarpc.com"] },

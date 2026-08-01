@@ -1,12 +1,12 @@
 /**
- * Testing Kit for effect-evm
+ * Testing Kit for effect-evm-v4
  *
  * This module exports mock builders and test utilities for downstream
- * consumers to easily test code that depends on effect-evm services.
+ * consumers to easily test code that depends on effect-evm-v4 services.
  *
  * @example
  * ```typescript
- * import { makeEffectEvmTestLayer } from "effect-evm/testing-kit";
+ * import { makeEffectEvmTestLayer } from "effect-evm-v4/testing-kit";
  *
  * const testLayer = makeEffectEvmTestLayer({
  *   publicClient: {

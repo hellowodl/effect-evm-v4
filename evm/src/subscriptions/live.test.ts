@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Cause, Chunk, Effect, Exit, Fiber, Stream, TestClock } from "effect";
+import { Cause, Effect, Exit, Fiber, Stream, SubscriptionRef } from "effect";
 import { constVoid as noop } from "effect/Function";
+import { TestClock } from "effect/testing";
 import type { Block } from "viem";
 import { mainnet } from "viem/chains";
 import { SubscriptionDroppedError, SubscriptionService } from "#src/subscriptions/index.js";
@@ -27,7 +28,7 @@ describe("SubscriptionService (Live)", () => {
       const exit = yield* Effect.exit(Stream.runDrain(stream));
       expect(Exit.isFailure(exit)).toBe(true);
       if (Exit.isFailure(exit)) {
-        const error = Cause.failureOption(exit.cause);
+        const error = Cause.findErrorOption(exit.cause);
         expect(error._tag).toBe("Some");
         if (error._tag === "Some") {
           expect(error.value).toBeInstanceOf(SubscriptionDroppedError);
@@ -68,10 +69,10 @@ describe("SubscriptionService (Live)", () => {
         retry: { baseDelay: 1000, jitter: false, maxDelay: 1000 },
       });
 
-      const statesFiber = yield* Effect.fork(
-        stateRef.changes.pipe(Stream.take(4), Stream.runCollect)
+      const statesFiber = yield* Effect.forkChild(
+        SubscriptionRef.changes(stateRef).pipe(Stream.take(4), Stream.runCollect)
       );
-      const headFiber = yield* Effect.fork(Stream.runHead(stream));
+      const headFiber = yield* Effect.forkChild(Stream.runHead(stream));
 
       yield* TestClock.adjust("1 second");
 
@@ -81,7 +82,7 @@ describe("SubscriptionService (Live)", () => {
         expect(result.value.number).toBe(123n);
       }
 
-      const states = Chunk.toArray(yield* Fiber.join(statesFiber));
+      const states = yield* Fiber.join(statesFiber);
       expect(states.some((s) => s.status === "retrying")).toBe(true);
       expect(states.at(-1)?.status).toBe("connected");
     }).pipe(Effect.provide(layer));

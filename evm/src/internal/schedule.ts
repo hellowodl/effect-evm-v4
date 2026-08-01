@@ -1,4 +1,4 @@
-import { Duration, Schedule } from "effect";
+import { Duration, Effect, Schedule } from "effect";
 
 /**
  * Configuration for exponential backoff with optional jitter
@@ -23,9 +23,9 @@ export const makeBackoffSchedule = (config?: BackoffConfig): Schedule.Schedule<n
 
   // Build base schedule: recurs with exponential delays capped at maxDelay
   const base = Schedule.recurs(maxRetries).pipe(
-    Schedule.modifyDelay((attempt, _) => {
-      const delay = Math.min(baseDelay * 2 ** attempt, maxDelay);
-      return Duration.millis(delay);
+    Schedule.modifyDelay(({ output }) => {
+      const delay = Math.min(baseDelay * 2 ** output, maxDelay);
+      return Effect.succeed(Duration.millis(delay));
     })
   );
 

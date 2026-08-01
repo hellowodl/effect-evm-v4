@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Common Changelog](https://common-changelog.org/).
 
+[0.1.0]: https://github.com/hellowodl/effect-evm-v4/releases/tag/evm%400.1.0
 [1.0.0]: https://github.com/PaulRBerg/prb-effect/releases/tag/evm%401.0.0
 [1.0.1]: https://github.com/PaulRBerg/prb-effect/releases/tag/evm%401.0.1
 [1.1.0]: https://github.com/PaulRBerg/prb-effect/releases/tag/evm%401.1.0
@@ -24,6 +25,23 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 [2.2.3]: https://github.com/PaulRBerg/prb-effect/releases/tag/evm%402.2.3
 [2.2.4]: https://github.com/PaulRBerg/prb-effect/releases/tag/evm%402.2.4
 [3.0.0]: https://github.com/PaulRBerg/prb-effect/releases/tag/evm@3.0.0
+
+> Versions 1.0.0 through 3.0.0 are the historical releases of the upstream
+> [`@prb/effect-evm`](https://github.com/PaulRBerg/prb-effect/tree/main/evm) package. This fork starts its own version
+> history at 0.1.0.
+
+## [0.1.0] - 2026-08-01
+
+### Changed
+
+- Rename the forked package from `@prb/effect-evm` to `effect-evm-v4`.
+- Port the EVM package from Effect v3 to Effect `4.0.0-beta.102` and adopt the corresponding v4 service, schema, stream,
+  cache, request, runtime, HTTP, scheduling, and testing APIs.
+- Update repository metadata and documentation for `hellowodl/effect-evm-v4`.
+
+### Added
+
+- Add explicit upstream attribution and include the original MIT license in the published package.
 
 ## [3.0.0] - 2026-07-30
 

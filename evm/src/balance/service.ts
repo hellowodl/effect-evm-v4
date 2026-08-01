@@ -1,10 +1,12 @@
-import { Context, Effect, Layer, Stream } from "effect";
+import type { Stream } from "effect";
+import { Context, Effect, Layer } from "effect";
 import type { Address, Hex } from "viem";
 import { erc20Abi, erc20Abi_bytes32 } from "#src/abi/index.js";
 import type { ContractReaderShape } from "#src/contract/index.js";
 import { ContractReader } from "#src/contract/index.js";
 import type { ClientNotFoundError, ContractReadError, MulticallError } from "#src/core/index.js";
 import { PublicClientService, TransportError } from "#src/core/index.js";
+import { fromWatchCallback } from "#src/internal/index.js";
 import { SpanNames } from "#src/telemetry/index.js";
 import type { MulticallResult } from "#src/types/index.js";
 import { decodeBytes32String } from "./utils.js";
@@ -63,10 +65,9 @@ export type BalanceServiceShape = {
   }) => Effect.Effect<boolean, ContractReadError | ClientNotFoundError>;
 };
 
-export class BalanceService extends Context.Tag("ew3/BalanceService")<
-  BalanceService,
-  BalanceServiceShape
->() {}
+export class BalanceService extends Context.Service<BalanceService, BalanceServiceShape>()(
+  "ew3/BalanceService"
+) {}
 
 /**
  * Build multicall requests for token balances including bytes32 fallbacks
@@ -302,28 +303,24 @@ export const BalanceServiceLive = Layer.effect(
         Effect.gen(function* () {
           const client = yield* publicClientService.get(params.chainId);
 
-          return Stream.async<bigint, unknown>((emit) => {
-            const unwatch = client.watchBlockNumber({
-              pollingInterval: params.pollingInterval,
-              onBlockNumber: async (blockNumber) => {
-                try {
-                  const balance = await client.getBalance({
-                    address: params.address,
-                    blockNumber,
-                  });
-                  emit.single(balance);
-                } catch (error) {
-                  emit.fail(error as unknown);
-                }
-              },
-              onError: (error) => {
-                emit.fail(error as unknown);
-              },
-            });
-
-            return Effect.sync(() => {
-              unwatch();
-            });
+          return fromWatchCallback<bigint, unknown>({
+            mapError: (error) => error,
+            watch: ({ onData, onError }) =>
+              client.watchBlockNumber({
+                pollingInterval: params.pollingInterval,
+                onBlockNumber: async (blockNumber) => {
+                  try {
+                    const balance = await client.getBalance({
+                      address: params.address,
+                      blockNumber,
+                    });
+                    onData(balance);
+                  } catch (error) {
+                    onError(error);
+                  }
+                },
+                onError,
+              }),
           });
         }).pipe(
           Effect.withSpan(SpanNames.BALANCE_WATCH, {
@@ -339,31 +336,27 @@ export const BalanceServiceLive = Layer.effect(
         Effect.gen(function* () {
           const client = yield* publicClientService.get(params.chainId);
 
-          return Stream.async<bigint, unknown>((emit) => {
-            const unwatch = client.watchBlockNumber({
-              pollingInterval: params.pollingInterval,
-              onBlockNumber: async (blockNumber) => {
-                try {
-                  const result = await client.readContract({
-                    abi: erc20Abi,
-                    address: params.tokenAddress,
-                    args: [params.address],
-                    blockNumber,
-                    functionName: "balanceOf",
-                  });
-                  emit.single(result as bigint);
-                } catch (error) {
-                  emit.fail(error as unknown);
-                }
-              },
-              onError: (error) => {
-                emit.fail(error as unknown);
-              },
-            });
-
-            return Effect.sync(() => {
-              unwatch();
-            });
+          return fromWatchCallback<bigint, unknown>({
+            mapError: (error) => error,
+            watch: ({ onData, onError }) =>
+              client.watchBlockNumber({
+                pollingInterval: params.pollingInterval,
+                onBlockNumber: async (blockNumber) => {
+                  try {
+                    const result = await client.readContract({
+                      abi: erc20Abi,
+                      address: params.tokenAddress,
+                      args: [params.address],
+                      blockNumber,
+                      functionName: "balanceOf",
+                    });
+                    onData(result as bigint);
+                  } catch (error) {
+                    onError(error);
+                  }
+                },
+                onError,
+              }),
           });
         }).pipe(
           Effect.withSpan(SpanNames.BALANCE_WATCH_TOKEN, {

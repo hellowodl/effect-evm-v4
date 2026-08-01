@@ -1,5 +1,4 @@
 # Creates GitHub releases when package tags (e.g., evm@1.0.0) are pushed.
-# Also syncs the major version branch (e.g., evm@v1) with the release tag.
 name: Release
 
 concurrency:
@@ -12,7 +11,7 @@ env:
 on:
   push:
     tags:
-      - "*@*.*.*"
+      - "evm@*.*.*"
 
 permissions:
   contents: write
@@ -31,19 +30,25 @@ jobs:
           VERSION="${TAG#*@}"
 
           case "$PACKAGE" in
-            evm|evm-safe|next|solana|xstate) ;;
+            evm) ;;
             *) echo "::error::Invalid package '$PACKAGE' from tag '$TAG'"; exit 1 ;;
           esac
 
           if [[ "$VERSION" == *-* ]]; then
             echo "::notice::Skipping prerelease $TAG"
-            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          echo "package=$PACKAGE" >> $GITHUB_OUTPUT
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "skip=false" >> $GITHUB_OUTPUT
+          MANIFEST_VERSION="$(node -p "require('./${PACKAGE}/package.json').version")"
+          if [[ "$VERSION" != "$MANIFEST_VERSION" ]]; then
+            echo "::error::Tag version '$VERSION' does not match package version '$MANIFEST_VERSION'"
+            exit 1
+          fi
+
+          echo "package=$PACKAGE" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "Releasing $PACKAGE@$VERSION"
 
           CHANGELOG_PATH="${PACKAGE}/CHANGELOG.md"
@@ -51,7 +56,7 @@ jobs:
             echo "::error::Missing CHANGELOG.md for $PACKAGE at $CHANGELOG_PATH"
             exit 1
           fi
-          echo "changelog_path=$CHANGELOG_PATH" >> $GITHUB_OUTPUT
+          echo "changelog_path=$CHANGELOG_PATH" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub release
         if: steps.parse.outputs.skip != 'true'
@@ -61,19 +66,3 @@ jobs:
           CHANGELOG_FILE: ${{ steps.parse.outputs.changelog_path }}
           TAG_PREFIX_REGEX: "[a-z0-9-]+@"
           ALLOW_EMPTY_CHANGELOG: "false"
-
-      - name: Sync major version branch
-        if: steps.parse.outputs.skip != 'true'
-        run: | #shell
-          PACKAGE="${{ steps.parse.outputs.package }}"
-          VERSION="${{ steps.parse.outputs.version }}"
-          MAJOR="${VERSION%%.*}"
-          MAJOR_BRANCH="${PACKAGE}@v${MAJOR}"
-
-          echo "Syncing branch '$MAJOR_BRANCH' with tag '$TAG'"
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin "$MAJOR_BRANCH" 2>/dev/null || true
-          git checkout -B "$MAJOR_BRANCH" "$TAG"
-          git push origin "$MAJOR_BRANCH" --force

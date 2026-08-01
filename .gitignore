@@ -1,8 +1,10 @@
 # directories
 .ai/
+.direnv/
 .serena/
 dist/
 node_modules/
+/effect/
 
 # files
 *.env
@@ -12,3 +14,5 @@ node_modules/
 *.tgz
 *.tsbuildinfo
 test-results.json
+# CocoIndex Code (ccc)
+/.cocoindex_code/

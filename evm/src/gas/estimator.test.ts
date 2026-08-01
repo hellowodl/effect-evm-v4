@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Effect, Exit, Layer } from "effect";
+import { Cause, Effect, Exit, Layer, Option } from "effect";
 import type { Address, Block, Hash, Hex } from "viem";
 import { base } from "viem/chains";
 import { GasService, GasServiceLive } from "#src/gas/index.js";
@@ -252,8 +252,12 @@ describe("GasService", () => {
           .pipe(Effect.exit);
 
         expect(Exit.isFailure(exit)).toBe(true);
-        if (Exit.isFailure(exit) && exit.cause._tag === "Fail") {
-          expect(exit.cause.error._tag).toBe("GasPriceUnavailableError");
+        if (Exit.isFailure(exit)) {
+          const error = Cause.findErrorOption(exit.cause);
+          expect(Option.isSome(error)).toBe(true);
+          if (Option.isSome(error)) {
+            expect(error.value._tag).toBe("GasPriceUnavailableError");
+          }
         }
       }).pipe(
         Effect.provide(
@@ -371,9 +375,13 @@ describe("GasService", () => {
           .pipe(Effect.exit);
 
         expect(Exit.isFailure(exit)).toBe(true);
-        if (Exit.isFailure(exit) && exit.cause._tag === "Fail") {
-          expect(exit.cause.error._tag).toBe("GasPriceUnavailableError");
-          expect(exit.cause.error.message).toContain("Failed to estimate L1 data fee");
+        if (Exit.isFailure(exit)) {
+          const error = Cause.findErrorOption(exit.cause);
+          expect(Option.isSome(error)).toBe(true);
+          if (Option.isSome(error)) {
+            expect(error.value._tag).toBe("GasPriceUnavailableError");
+            expect(error.value.message).toContain("Failed to estimate L1 data fee");
+          }
         }
       }).pipe(
         Effect.provide(
@@ -438,9 +446,13 @@ describe("GasService", () => {
         const exit = yield* gasService.getBaseFee({ chainId: TEST_CHAIN_ID }).pipe(Effect.exit);
 
         expect(Exit.isFailure(exit)).toBe(true);
-        if (Exit.isFailure(exit) && exit.cause._tag === "Fail") {
-          expect(exit.cause.error._tag).toBe("GasPriceUnavailableError");
-          expect(exit.cause.error.message).toContain("not support EIP-1559");
+        if (Exit.isFailure(exit)) {
+          const error = Cause.findErrorOption(exit.cause);
+          expect(Option.isSome(error)).toBe(true);
+          if (Option.isSome(error)) {
+            expect(error.value._tag).toBe("GasPriceUnavailableError");
+            expect(error.value.message).toContain("not support EIP-1559");
+          }
         }
       }).pipe(Effect.provide(makeLegacyLayer()))
     );

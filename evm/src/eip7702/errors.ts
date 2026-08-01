@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-export class Eip7702AuthorizationSigningError extends Schema.TaggedError<Eip7702AuthorizationSigningError>()(
+export class Eip7702AuthorizationSigningError extends Schema.TaggedErrorClass<Eip7702AuthorizationSigningError>()(
   "Eip7702AuthorizationSigningError",
   {
     cause: Schema.optional(Schema.Unknown),
@@ -9,7 +9,7 @@ export class Eip7702AuthorizationSigningError extends Schema.TaggedError<Eip7702
   }
 ) {}
 
-export class Eip7702AuthorizationPreparationError extends Schema.TaggedError<Eip7702AuthorizationPreparationError>()(
+export class Eip7702AuthorizationPreparationError extends Schema.TaggedErrorClass<Eip7702AuthorizationPreparationError>()(
   "Eip7702AuthorizationPreparationError",
   {
     cause: Schema.optional(Schema.Unknown),
@@ -18,7 +18,7 @@ export class Eip7702AuthorizationPreparationError extends Schema.TaggedError<Eip
   }
 ) {}
 
-export class Eip7702SendTxError extends Schema.TaggedError<Eip7702SendTxError>()(
+export class Eip7702SendTxError extends Schema.TaggedErrorClass<Eip7702SendTxError>()(
   "Eip7702SendTxError",
   {
     cause: Schema.optional(Schema.Unknown),

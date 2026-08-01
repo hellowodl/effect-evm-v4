@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Chunk, Effect, Exit, Layer, Stream, SubscriptionRef } from "effect";
+import { Effect, Exit, Layer, Stream, SubscriptionRef } from "effect";
 import type { Abi, Hash, TransactionReceipt } from "viem";
 import { erc20Abi } from "viem";
 import { ContractPipeline, ContractPipelineLive, ContractWriterLive } from "#src/contract/index.js";
@@ -702,7 +702,7 @@ describe("ContractPipeline", () => {
 
         const finalTerminal = yield* terminal;
         const finalResult = expectSuccessTerminal(finalTerminal);
-        const finalState = yield* stateRef.get;
+        const finalState = yield* SubscriptionRef.get(stateRef);
 
         expect(finalResult.hash).toBe(TEST_TX_HASH);
         expect(finalState.status).toBe("mined");
@@ -740,13 +740,13 @@ describe("ContractPipeline", () => {
           functionName: "transfer",
         });
 
-        const result = yield* terminal.pipe(Effect.either);
-        expect(result._tag).toBe("Left");
-        if (result._tag === "Left") {
-          expect(result.left).toBeInstanceOf(TransactionSubmissionError);
+        const result = yield* terminal.pipe(Effect.result);
+        expect(result._tag).toBe("Failure");
+        if (result._tag === "Failure") {
+          expect(result.failure).toBeInstanceOf(TransactionSubmissionError);
         }
 
-        const state = yield* stateRef.get;
+        const state = yield* SubscriptionRef.get(stateRef);
         expect(state.status).toBe("failed");
         if (state.status === "failed") {
           expect(state.phase).toBe("submission");
@@ -800,7 +800,7 @@ describe("ContractPipeline", () => {
         expect(Exit.isFailure(exit)).toBe(true);
         expect(writeCalls).toBe(0);
 
-        const state = yield* stateRef.get;
+        const state = yield* SubscriptionRef.get(stateRef);
         expect(state.status).toBe("failed");
         if (state.status === "failed") {
           expect(state.phase).toBe("preflight");
@@ -849,7 +849,7 @@ describe("ContractPipeline", () => {
         expect(simulateCalls).toBe(0);
         expect(writeCalls).toBe(1);
 
-        const state = yield* stateRef.get;
+        const state = yield* SubscriptionRef.get(stateRef);
         expect(state.status).toBe("mined");
         if (state.status === "mined") {
           expect(state.preflightWarning?.phase).toBe("estimate");
@@ -900,7 +900,7 @@ describe("ContractPipeline", () => {
         expect(finalResult.hash).toBe(TEST_TX_HASH);
         expect(writeCalls).toBe(1);
 
-        const state = yield* stateRef.get;
+        const state = yield* SubscriptionRef.get(stateRef);
         expect(state.status).toBe("mined");
         if (state.status === "mined") {
           expect(state.preflightWarning?.phase).toBe("estimate");
@@ -949,7 +949,7 @@ describe("ContractPipeline", () => {
         expect(simulateCalls).toBe(1);
         expect(writeCalls).toBe(1);
 
-        const state = yield* stateRef.get;
+        const state = yield* SubscriptionRef.get(stateRef);
         expect(state.status).toBe("mined");
         if (state.status === "mined") {
           expect(state.preflightWarning?.phase).toBe("simulate");
@@ -1047,7 +1047,7 @@ describe("ContractPipeline", () => {
         const exit = yield* terminal.pipe(Effect.exit);
         expect(Exit.isFailure(exit)).toBe(true);
 
-        const state = yield* stateRef.get;
+        const state = yield* SubscriptionRef.get(stateRef);
         expect(state.status).toBe("failed");
         if (state.status === "failed") {
           expect(state.phase).toBe("receipt");
@@ -1094,7 +1094,7 @@ describe("ContractPipeline", () => {
         const exit = yield* terminal.pipe(Effect.exit);
         expect(Exit.isFailure(exit)).toBe(true);
 
-        const state = yield* stateRef.get;
+        const state = yield* SubscriptionRef.get(stateRef);
         expect(state.status).toBe("failed");
         if (state.status === "failed") {
           expect(state.phase).toBe("event-decode");
@@ -1141,7 +1141,7 @@ describe("ContractPipeline", () => {
 
         const finalTerminal = yield* terminal;
         const final = expectSuccessTerminal(finalTerminal);
-        const current = yield* stateRef.get;
+        const current = yield* SubscriptionRef.get(stateRef);
 
         expect(final.hash).toBe(TEST_TX_HASH);
         expect(current.status).toBe("idle");
@@ -1326,7 +1326,7 @@ describe("ContractPipeline", () => {
 
         const finalTerminal = yield* terminal;
         const final = expectSuccessTerminal(finalTerminal);
-        const current = yield* stateRef.get;
+        const current = yield* SubscriptionRef.get(stateRef);
 
         // Adapter handled the write: its stateRef starts "idle" and the default
         // wallet write path (which rejects below) is never hit.
@@ -1670,7 +1670,7 @@ describe("ContractPipeline", () => {
         expect(confirmed).toEqual(managedNonces);
         expect(released).toEqual([]);
 
-        const state = yield* stateRef.get;
+        const state = yield* SubscriptionRef.get(stateRef);
         expect(state.status).toBe("failed");
         if (state.status === "failed") {
           expect(state.phase).toBe("submission");
@@ -1738,7 +1738,7 @@ describe("ContractPipeline", () => {
         expect(confirmed).toEqual([]);
         expect(released).toEqual([]);
 
-        const state = yield* stateRef.get;
+        const state = yield* SubscriptionRef.get(stateRef);
         expect(state.status).toBe("failed");
         if (state.status === "failed") {
           expect(state.phase).toBe("submission");
@@ -1826,16 +1826,16 @@ describe("ContractPipeline", () => {
             chainId: TEST_CHAIN_ID,
             functionName: "transfer",
           })
-          .pipe(Effect.either);
+          .pipe(Effect.result);
 
-        expect(result._tag).toBe("Left");
-        if (result._tag === "Left") {
-          expect(result.left._tag).toBe("TxFailedError");
-          if (result.left._tag !== "TxFailedError") {
-            throw new Error(`Expected TxFailedError, got ${result.left._tag}`);
+        expect(result._tag).toBe("Failure");
+        if (result._tag === "Failure") {
+          expect(result.failure._tag).toBe("TxFailedError");
+          if (result.failure._tag !== "TxFailedError") {
+            throw new Error(`Expected TxFailedError, got ${result.failure._tag}`);
           }
-          expect(result.left.hash).toBe(TEST_TX_HASH);
-          expect(result.left.message).toContain("reverted onchain");
+          expect(result.failure.hash).toBe(TEST_TX_HASH);
+          expect(result.failure.message).toContain("reverted onchain");
         }
         expect(writeCalls).toBe(2);
         expect(writeNonces).toEqual([7n, 8n]);
@@ -1882,7 +1882,7 @@ describe("ContractPipeline", () => {
             });
 
             // Let the forked fiber advance toward the blocked receipt wait.
-            yield* Effect.yieldNow();
+            yield* Effect.yieldNow;
             return execution.terminal;
           })
         );
@@ -1890,7 +1890,7 @@ describe("ContractPipeline", () => {
         // Scope is now closed; the forked fiber was interrupted before resolving the
         // Deferred. Awaiting must terminate (with interruption), not hang.
         const exit = yield* terminal.pipe(Effect.exit);
-        expect(Exit.isInterrupted(exit)).toBe(true);
+        expect(Exit.hasInterrupts(exit)).toBe(true);
       }).pipe(
         Effect.provide(
           makeContractPipelineTestLayer({
@@ -1931,11 +1931,9 @@ describe("ContractPipeline", () => {
 
         // Blocks tick every 5ms while the receipt wait takes 40ms, so several
         // pending updates fire (blocksElapsed climbs past 1) before mining.
-        const states = Chunk.toArray(
-          yield* stateRef.changes.pipe(
-            Stream.takeUntil((state) => state.status === "mined"),
-            Stream.runCollect
-          )
+        const states = yield* SubscriptionRef.changes(stateRef).pipe(
+          Stream.takeUntil((state) => state.status === "mined"),
+          Stream.runCollect
         );
 
         const pendings = states.filter((state) => state.status === "pending");

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Chunk, Effect, Exit, Fiber, Layer, Ref, Stream, TestClock } from "effect";
+import { Cause, Deferred, Effect, Exit, Fiber, Layer, Queue, Ref, Stream } from "effect";
+import { TestClock } from "effect/testing";
 import type { Address, Hash, Log } from "viem";
 import { erc20Abi } from "viem";
 import type { EventWatchError } from "#src/core/index.js";
+import { ClientNotFoundError } from "#src/core/index.js";
 import type { DecodedEvent } from "#src/events/index.js";
 import { EventStream, ReliableEventStream, ReliableEventStreamLive } from "#src/events/index.js";
 import {
@@ -55,12 +57,24 @@ const createDecodedEvent = (log: Log): DecodedEvent<typeof erc20Abi, "Transfer">
   },
 });
 
+type EmitTransfer = (event: DecodedEvent<typeof erc20Abi, "Transfer">) => void;
+
+const awaitEmitCallback = (get: () => EmitTransfer | undefined): Effect.Effect<EmitTransfer> =>
+  Effect.gen(function* () {
+    let emit = get();
+    while (emit === undefined) {
+      yield* Effect.yieldNow;
+      emit = get();
+    }
+    return emit;
+  });
+
 describe("ReliableEventStream", () => {
   describe("watch", () => {
     it.effect("events emitted when confirmations >= threshold", () =>
       Effect.gen(function* () {
         const blockNumberRef = yield* Ref.make(1000n);
-        let emitCallback: ((event: DecodedEvent<typeof erc20Abi, "Transfer">) => void) | undefined;
+        let emitCallback: EmitTransfer | undefined;
 
         const layers = Layer.provide(
           ReliableEventStreamLive,
@@ -69,14 +83,14 @@ describe("ReliableEventStream", () => {
               decodeReceipt: () => Effect.succeed([]),
               watch: () =>
                 Effect.succeed(
-                  Stream.async<DecodedEvent<typeof erc20Abi, "Transfer">, EventWatchError>(
-                    (emit) => {
-                      emitCallback = (event) => emit.single(event);
+                  Stream.callback<DecodedEvent<typeof erc20Abi, "Transfer">, EventWatchError>(
+                    (queue) => {
+                      emitCallback = (event) => Queue.offerUnsafe(queue, event);
                       return Effect.void;
                     }
                   )
                 ),
-            } as EventStream["Type"]),
+            } as EventStream["Service"]),
             makeMockPublicClientLayer({
               getBlockNumber: () => Ref.get(blockNumberRef).pipe(Effect.runPromise),
             })
@@ -94,14 +108,13 @@ describe("ReliableEventStream", () => {
         });
 
         // Fork stream consumption
-        const fiber = yield* Effect.fork(Stream.runCollect(Stream.take(stream, 1)));
+        const fiber = yield* Effect.forkChild(Stream.runCollect(Stream.take(stream, 1)));
 
         // Emit event at block 1000
         yield* TestClock.adjust("20 millis");
-        if (emitCallback) {
-          const log = createMockTransferEvent(1000n, "0xabc123", 0);
-          emitCallback(createDecodedEvent(log));
-        }
+        const emit = yield* awaitEmitCallback(() => emitCallback);
+        const log = createMockTransferEvent(1000n, "0xabc123", 0);
+        emit(createDecodedEvent(log));
 
         // Advance block to 1002 (2 confirmations)
         yield* TestClock.adjust("60 millis");
@@ -114,7 +127,7 @@ describe("ReliableEventStream", () => {
         expect(Exit.isSuccess(exit)).toBe(true);
 
         if (Exit.isSuccess(exit)) {
-          const events = Chunk.toReadonlyArray(exit.value);
+          const events = exit.value;
           expect(events).toHaveLength(1);
           expect(events[0].blockNumber).toBe(1000n);
         }
@@ -124,7 +137,7 @@ describe("ReliableEventStream", () => {
     it.effect("reorged events filtered out from pending", () =>
       Effect.gen(function* () {
         const blockNumberRef = yield* Ref.make(1000n);
-        let emitCallback: ((event: DecodedEvent<typeof erc20Abi, "Transfer">) => void) | undefined;
+        let emitCallback: EmitTransfer | undefined;
 
         const layers = Layer.provide(
           ReliableEventStreamLive,
@@ -133,14 +146,14 @@ describe("ReliableEventStream", () => {
               decodeReceipt: () => Effect.succeed([]),
               watch: () =>
                 Effect.succeed(
-                  Stream.async<DecodedEvent<typeof erc20Abi, "Transfer">, EventWatchError>(
-                    (emit) => {
-                      emitCallback = (event) => emit.single(event);
+                  Stream.callback<DecodedEvent<typeof erc20Abi, "Transfer">, EventWatchError>(
+                    (queue) => {
+                      emitCallback = (event) => Queue.offerUnsafe(queue, event);
                       return Effect.void;
                     }
                   )
                 ),
-            } as EventStream["Type"]),
+            } as EventStream["Service"]),
             makeMockPublicClientLayer({
               getBlockNumber: () => Ref.get(blockNumberRef).pipe(Effect.runPromise),
             })
@@ -157,47 +170,43 @@ describe("ReliableEventStream", () => {
           pollingInterval: 50,
         });
 
-        // Fork stream consumption
-        const fiber = yield* Effect.fork(Stream.runCollect(stream));
+        // Complete on the first confirmed event. The reorged event must not win;
+        // a later sentinel event makes the collected output observable.
+        const fiber = yield* Effect.forkChild(Stream.runCollect(Stream.take(stream, 1)));
 
         // Emit event at block 1000
         yield* TestClock.adjust("20 millis");
-        if (emitCallback) {
-          const log = createMockTransferEvent(1000n, "0xabc123", 0, false);
-          emitCallback(createDecodedEvent(log));
-        }
+        const emit = yield* awaitEmitCallback(() => emitCallback);
+        const log = createMockTransferEvent(1000n, "0xabc123", 0, false);
+        emit(createDecodedEvent(log));
 
         // Emit reorg for same event
         yield* TestClock.adjust("30 millis");
-        if (emitCallback) {
-          const log = createMockTransferEvent(1000n, "0xabc123", 0, true);
-          emitCallback(createDecodedEvent(log));
-        }
+        const removedLog = createMockTransferEvent(1000n, "0xabc123", 0, true);
+        emit(createDecodedEvent(removedLog));
 
-        // Advance block to confirm
+        // Advance the head so the removed event would otherwise be confirmed.
         yield* TestClock.adjust("30 millis");
         yield* Ref.set(blockNumberRef, 1001n);
-
-        // Wait for confirmation check
         yield* TestClock.adjust("100 millis");
 
-        // Interrupt and check
-        yield* Fiber.interrupt(fiber);
-        const exit = yield* Fiber.await(fiber);
+        // Emit and confirm a sentinel that completes the stream normally.
+        const sentinel = createMockTransferEvent(1001n, "0xdef456", 0);
+        emit(createDecodedEvent(sentinel));
+        yield* TestClock.adjust("60 millis");
+        yield* Ref.set(blockNumberRef, 1002n);
+        yield* TestClock.adjust("100 millis");
 
-        if (Exit.isSuccess(exit)) {
-          const events = Chunk.toReadonlyArray(exit.value);
-          expect(events).toHaveLength(0); // Event was reorged out
-        } else {
-          expect(Exit.isInterrupted(exit)).toBe(true);
-        }
+        const events = yield* Fiber.join(fiber);
+        expect(events).toHaveLength(1);
+        expect(events[0].transactionHash).toBe("0xdef456");
       })
     );
 
     it.effect("event key serialization with txHash and logIndex", () =>
       Effect.gen(function* () {
         const blockNumberRef = yield* Ref.make(1000n);
-        let emitCallback: ((event: DecodedEvent<typeof erc20Abi, "Transfer">) => void) | undefined;
+        let emitCallback: EmitTransfer | undefined;
 
         const layers = Layer.provide(
           ReliableEventStreamLive,
@@ -206,14 +215,14 @@ describe("ReliableEventStream", () => {
               decodeReceipt: () => Effect.succeed([]),
               watch: () =>
                 Effect.succeed(
-                  Stream.async<DecodedEvent<typeof erc20Abi, "Transfer">, EventWatchError>(
-                    (emit) => {
-                      emitCallback = (event) => emit.single(event);
+                  Stream.callback<DecodedEvent<typeof erc20Abi, "Transfer">, EventWatchError>(
+                    (queue) => {
+                      emitCallback = (event) => Queue.offerUnsafe(queue, event);
                       return Effect.void;
                     }
                   )
                 ),
-            } as EventStream["Type"]),
+            } as EventStream["Service"]),
             makeMockPublicClientLayer({
               getBlockNumber: () => Ref.get(blockNumberRef).pipe(Effect.runPromise),
             })
@@ -230,16 +239,15 @@ describe("ReliableEventStream", () => {
           pollingInterval: 50,
         });
 
-        const fiber = yield* Effect.fork(Stream.runCollect(Stream.take(stream, 2)));
+        const fiber = yield* Effect.forkChild(Stream.runCollect(Stream.take(stream, 2)));
 
         // Emit two events with same txHash but different logIndex
         yield* TestClock.adjust("20 millis");
-        if (emitCallback) {
-          const log1 = createMockTransferEvent(1000n, "0xabc123", 0);
-          const log2 = createMockTransferEvent(1000n, "0xabc123", 1);
-          emitCallback(createDecodedEvent(log1));
-          emitCallback(createDecodedEvent(log2));
-        }
+        const emit = yield* awaitEmitCallback(() => emitCallback);
+        const log1 = createMockTransferEvent(1000n, "0xabc123", 0);
+        const log2 = createMockTransferEvent(1000n, "0xabc123", 1);
+        emit(createDecodedEvent(log1));
+        emit(createDecodedEvent(log2));
 
         // Advance block
         yield* TestClock.adjust("60 millis");
@@ -252,7 +260,7 @@ describe("ReliableEventStream", () => {
         expect(Exit.isSuccess(exit)).toBe(true);
 
         if (Exit.isSuccess(exit)) {
-          const events = Chunk.toReadonlyArray(exit.value);
+          const events = exit.value;
           expect(events).toHaveLength(2);
           expect(events[0].logIndex).toBe(0);
           expect(events[1].logIndex).toBe(1);
@@ -263,7 +271,7 @@ describe("ReliableEventStream", () => {
     it.effect("multiple events from same block handled together", () =>
       Effect.gen(function* () {
         const blockNumberRef = yield* Ref.make(1000n);
-        let emitCallback: ((event: DecodedEvent<typeof erc20Abi, "Transfer">) => void) | undefined;
+        let emitCallback: EmitTransfer | undefined;
 
         const layers = Layer.provide(
           ReliableEventStreamLive,
@@ -272,14 +280,14 @@ describe("ReliableEventStream", () => {
               decodeReceipt: () => Effect.succeed([]),
               watch: () =>
                 Effect.succeed(
-                  Stream.async<DecodedEvent<typeof erc20Abi, "Transfer">, EventWatchError>(
-                    (emit) => {
-                      emitCallback = (event) => emit.single(event);
+                  Stream.callback<DecodedEvent<typeof erc20Abi, "Transfer">, EventWatchError>(
+                    (queue) => {
+                      emitCallback = (event) => Queue.offerUnsafe(queue, event);
                       return Effect.void;
                     }
                   )
                 ),
-            } as EventStream["Type"]),
+            } as EventStream["Service"]),
             makeMockPublicClientLayer({
               getBlockNumber: () => Ref.get(blockNumberRef).pipe(Effect.runPromise),
             })
@@ -296,18 +304,17 @@ describe("ReliableEventStream", () => {
           pollingInterval: 50,
         });
 
-        const fiber = yield* Effect.fork(Stream.runCollect(Stream.take(stream, 3)));
+        const fiber = yield* Effect.forkChild(Stream.runCollect(Stream.take(stream, 3)));
 
         // Emit three events from same block
         yield* TestClock.adjust("20 millis");
-        if (emitCallback) {
-          const log1 = createMockTransferEvent(1000n, "0xabc123", 0);
-          const log2 = createMockTransferEvent(1000n, "0xdef456", 0);
-          const log3 = createMockTransferEvent(1000n, "0x789abc", 0);
-          emitCallback(createDecodedEvent(log1));
-          emitCallback(createDecodedEvent(log2));
-          emitCallback(createDecodedEvent(log3));
-        }
+        const emit = yield* awaitEmitCallback(() => emitCallback);
+        const log1 = createMockTransferEvent(1000n, "0xabc123", 0);
+        const log2 = createMockTransferEvent(1000n, "0xdef456", 0);
+        const log3 = createMockTransferEvent(1000n, "0x789abc", 0);
+        emit(createDecodedEvent(log1));
+        emit(createDecodedEvent(log2));
+        emit(createDecodedEvent(log3));
 
         // Advance block
         yield* TestClock.adjust("60 millis");
@@ -320,7 +327,7 @@ describe("ReliableEventStream", () => {
         expect(Exit.isSuccess(exit)).toBe(true);
 
         if (Exit.isSuccess(exit)) {
-          const events = Chunk.toReadonlyArray(exit.value);
+          const events = exit.value;
           expect(events).toHaveLength(3);
           expect(events.every((e) => e.blockNumber === 1000n)).toBe(true);
         }
@@ -330,7 +337,7 @@ describe("ReliableEventStream", () => {
     it.effect("events from different blocks tracked separately", () =>
       Effect.gen(function* () {
         const blockNumberRef = yield* Ref.make(1000n);
-        let emitCallback: ((event: DecodedEvent<typeof erc20Abi, "Transfer">) => void) | undefined;
+        let emitCallback: EmitTransfer | undefined;
 
         const layers = Layer.provide(
           ReliableEventStreamLive,
@@ -339,14 +346,14 @@ describe("ReliableEventStream", () => {
               decodeReceipt: () => Effect.succeed([]),
               watch: () =>
                 Effect.succeed(
-                  Stream.async<DecodedEvent<typeof erc20Abi, "Transfer">, EventWatchError>(
-                    (emit) => {
-                      emitCallback = (event) => emit.single(event);
+                  Stream.callback<DecodedEvent<typeof erc20Abi, "Transfer">, EventWatchError>(
+                    (queue) => {
+                      emitCallback = (event) => Queue.offerUnsafe(queue, event);
                       return Effect.void;
                     }
                   )
                 ),
-            } as EventStream["Type"]),
+            } as EventStream["Service"]),
             makeMockPublicClientLayer({
               getBlockNumber: () => Ref.get(blockNumberRef).pipe(Effect.runPromise),
             })
@@ -363,22 +370,19 @@ describe("ReliableEventStream", () => {
           pollingInterval: 50,
         });
 
-        const fiber = yield* Effect.fork(Stream.runCollect(Stream.take(stream, 2)));
+        const fiber = yield* Effect.forkChild(Stream.runCollect(Stream.take(stream, 2)));
 
         // Emit event at block 1000
         yield* TestClock.adjust("20 millis");
-        if (emitCallback) {
-          const log = createMockTransferEvent(1000n, "0xabc123", 0);
-          emitCallback(createDecodedEvent(log));
-        }
+        const emit = yield* awaitEmitCallback(() => emitCallback);
+        const log = createMockTransferEvent(1000n, "0xabc123", 0);
+        emit(createDecodedEvent(log));
 
         // Advance to 1001 and emit another event
         yield* TestClock.adjust("60 millis");
         yield* Ref.set(blockNumberRef, 1001n);
-        if (emitCallback) {
-          const log = createMockTransferEvent(1001n, "0xdef456", 0);
-          emitCallback(createDecodedEvent(log));
-        }
+        const nextLog = createMockTransferEvent(1001n, "0xdef456", 0);
+        emit(createDecodedEvent(nextLog));
 
         // Advance to 1003 to confirm both
         yield* TestClock.adjust("60 millis");
@@ -391,7 +395,7 @@ describe("ReliableEventStream", () => {
         expect(Exit.isSuccess(exit)).toBe(true);
 
         if (Exit.isSuccess(exit)) {
-          const events = Chunk.toReadonlyArray(exit.value);
+          const events = exit.value;
           expect(events).toHaveLength(2);
           expect(events[0].blockNumber).toBe(1000n);
           expect(events[1].blockNumber).toBe(1001n);
@@ -402,7 +406,7 @@ describe("ReliableEventStream", () => {
     it.effect("default confirmations is 1", () =>
       Effect.gen(function* () {
         const blockNumberRef = yield* Ref.make(1000n);
-        let emitCallback: ((event: DecodedEvent<typeof erc20Abi, "Transfer">) => void) | undefined;
+        let emitCallback: EmitTransfer | undefined;
 
         const layers = Layer.provide(
           ReliableEventStreamLive,
@@ -411,14 +415,14 @@ describe("ReliableEventStream", () => {
               decodeReceipt: () => Effect.succeed([]),
               watch: () =>
                 Effect.succeed(
-                  Stream.async<DecodedEvent<typeof erc20Abi, "Transfer">, EventWatchError>(
-                    (emit) => {
-                      emitCallback = (event) => emit.single(event);
+                  Stream.callback<DecodedEvent<typeof erc20Abi, "Transfer">, EventWatchError>(
+                    (queue) => {
+                      emitCallback = (event) => Queue.offerUnsafe(queue, event);
                       return Effect.void;
                     }
                   )
                 ),
-            } as EventStream["Type"]),
+            } as EventStream["Service"]),
             makeMockPublicClientLayer({
               getBlockNumber: () => Ref.get(blockNumberRef).pipe(Effect.runPromise),
             })
@@ -435,14 +439,13 @@ describe("ReliableEventStream", () => {
           pollingInterval: 50,
         });
 
-        const fiber = yield* Effect.fork(Stream.runCollect(Stream.take(stream, 1)));
+        const fiber = yield* Effect.forkChild(Stream.runCollect(Stream.take(stream, 1)));
 
         // Emit event at block 1000
         yield* TestClock.adjust("20 millis");
-        if (emitCallback) {
-          const log = createMockTransferEvent(1000n, "0xabc123", 0);
-          emitCallback(createDecodedEvent(log));
-        }
+        const emit = yield* awaitEmitCallback(() => emitCallback);
+        const log = createMockTransferEvent(1000n, "0xabc123", 0);
+        emit(createDecodedEvent(log));
 
         // Advance to 1001 (1 confirmation)
         yield* TestClock.adjust("60 millis");
@@ -455,7 +458,7 @@ describe("ReliableEventStream", () => {
         expect(Exit.isSuccess(exit)).toBe(true);
 
         if (Exit.isSuccess(exit)) {
-          const events = Chunk.toReadonlyArray(exit.value);
+          const events = exit.value;
           expect(events).toHaveLength(1);
         }
       })
@@ -470,11 +473,11 @@ describe("ReliableEventStream", () => {
               decodeReceipt: () => Effect.succeed([]),
               watch: () =>
                 Effect.succeed(
-                  Stream.async<DecodedEvent<typeof erc20Abi, "Transfer">, EventWatchError>(
+                  Stream.callback<DecodedEvent<typeof erc20Abi, "Transfer">, EventWatchError>(
                     () => Effect.void
                   )
                 ),
-            } as EventStream["Type"]),
+            } as EventStream["Service"]),
             makeMockPublicClientLayer()
           )
         );
@@ -490,12 +493,22 @@ describe("ReliableEventStream", () => {
         );
 
         expect(Exit.isFailure(exit)).toBe(true);
+        if (Exit.isFailure(exit)) {
+          const error = Cause.findErrorOption(exit.cause);
+          expect(error._tag).toBe("Some");
+          if (error._tag === "Some") {
+            expect(error.value).toBeInstanceOf(ClientNotFoundError);
+          }
+        }
       })
     );
 
     it.effect("stream cleanup interrupts background fibers", () =>
       Effect.gen(function* () {
         const blockNumberRef = yield* Ref.make(1000n);
+        const eventProcessorStarted = yield* Deferred.make<void>();
+        const eventProcessorFinalizedRef = yield* Ref.make(false);
+        const pollCountRef = yield* Ref.make(0);
 
         const layers = Layer.provide(
           ReliableEventStreamLive,
@@ -504,13 +517,20 @@ describe("ReliableEventStream", () => {
               decodeReceipt: () => Effect.succeed([]),
               watch: () =>
                 Effect.succeed(
-                  Stream.async<DecodedEvent<typeof erc20Abi, "Transfer">, EventWatchError>(
-                    () => Effect.void
+                  Stream.callback<DecodedEvent<typeof erc20Abi, "Transfer">, EventWatchError>(() =>
+                    Effect.acquireRelease(Deferred.succeed(eventProcessorStarted, undefined), () =>
+                      Ref.set(eventProcessorFinalizedRef, true)
+                    )
                   )
                 ),
-            } as EventStream["Type"]),
+            } as EventStream["Service"]),
             makeMockPublicClientLayer({
-              getBlockNumber: () => Ref.get(blockNumberRef).pipe(Effect.runPromise),
+              getBlockNumber: () =>
+                Effect.runPromise(
+                  Ref.update(pollCountRef, (count) => count + 1).pipe(
+                    Effect.andThen(Ref.get(blockNumberRef))
+                  )
+                ),
             })
           )
         );
@@ -526,17 +546,24 @@ describe("ReliableEventStream", () => {
         });
 
         // Fork stream consumption
-        const fiber = yield* Effect.fork(Stream.runCollect(stream));
+        const fiber = yield* Effect.forkChild(Stream.runCollect(stream));
 
-        // Let it run briefly
+        // Wait until the base stream has installed its scoped finalizer.
+        yield* Deferred.await(eventProcessorStarted);
         yield* TestClock.adjust("100 millis");
 
         // Interrupt the stream
         yield* Fiber.interrupt(fiber);
         const exit = yield* Fiber.await(fiber);
 
-        // Should be interrupted, not failed
-        expect(Exit.isInterrupted(exit)).toBe(true);
+        // Both scoped background activities stop with the consumer.
+        expect(Exit.hasInterrupts(exit)).toBe(true);
+        expect(yield* Ref.get(eventProcessorFinalizedRef)).toBe(true);
+
+        const pollCountAfterInterrupt = yield* Ref.get(pollCountRef);
+        expect(pollCountAfterInterrupt).toBeGreaterThan(0);
+        yield* TestClock.adjust("200 millis");
+        expect(yield* Ref.get(pollCountRef)).toBe(pollCountAfterInterrupt);
       })
     );
   });

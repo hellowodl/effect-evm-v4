@@ -71,10 +71,11 @@ describe("tx store hooks", () => {
     };
 
     const { cleanup } = render(
-      React.createElement(EffectEvmProviderSync, {
-        children: React.createElement(Probe),
-        layer: InMemoryTxStoreLive,
-      })
+      React.createElement(
+        EffectEvmProviderSync,
+        { layer: InMemoryTxStoreLive },
+        React.createElement(Probe)
+      )
     );
 
     await act(async () => {
@@ -130,10 +131,11 @@ describe("tx store hooks", () => {
     };
 
     const { cleanup } = render(
-      React.createElement(EffectEvmProviderSync, {
-        children: React.createElement(Probe),
-        layer: InMemoryTxStoreLive,
-      })
+      React.createElement(
+        EffectEvmProviderSync,
+        { layer: InMemoryTxStoreLive },
+        React.createElement(Probe)
+      )
     );
 
     await act(async () => {

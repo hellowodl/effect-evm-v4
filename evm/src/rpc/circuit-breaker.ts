@@ -23,7 +23,7 @@ export type CircuitBreakerConfig = {
  * @example
  * ```typescript
  * import { Effect } from "effect";
- * import { CircuitBreakerConfigFromEnv } from "effect-evm/rpc";
+ * import { CircuitBreakerConfigFromEnv } from "effect-evm-v4/rpc";
  *
  * const program = Effect.gen(function* () {
  *   const config = yield* CircuitBreakerConfigFromEnv;
@@ -40,10 +40,13 @@ export const CircuitBreakerConfigFromEnv = Config.all({
 /**
  * Error thrown when circuit breaker is open
  */
-export class CircuitOpenError extends Schema.TaggedError<CircuitOpenError>()("CircuitOpenError", {
-  message: Schema.String,
-  openedAt: Schema.Number,
-}) {}
+export class CircuitOpenError extends Schema.TaggedErrorClass<CircuitOpenError>()(
+  "CircuitOpenError",
+  {
+    message: Schema.String,
+    openedAt: Schema.Number,
+  }
+) {}
 
 /**
  * Internal state tracking for circuit breaker
