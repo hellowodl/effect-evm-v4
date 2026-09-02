@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-export class EnsNameNotFoundError extends Schema.TaggedErrorClass<EnsNameNotFoundError>()(
+export class EnsNameNotFoundError extends Schema.TaggedError<EnsNameNotFoundError>()(
   "EnsNameNotFoundError",
   {
     message: Schema.String,
@@ -8,7 +8,7 @@ export class EnsNameNotFoundError extends Schema.TaggedErrorClass<EnsNameNotFoun
   }
 ) {}
 
-export class EnsReverseNameNotFoundError extends Schema.TaggedErrorClass<EnsReverseNameNotFoundError>()(
+export class EnsReverseNameNotFoundError extends Schema.TaggedError<EnsReverseNameNotFoundError>()(
   "EnsReverseNameNotFoundError",
   {
     address: Schema.String,
@@ -16,7 +16,7 @@ export class EnsReverseNameNotFoundError extends Schema.TaggedErrorClass<EnsReve
   }
 ) {}
 
-export class EnsTextNotFoundError extends Schema.TaggedErrorClass<EnsTextNotFoundError>()(
+export class EnsTextNotFoundError extends Schema.TaggedError<EnsTextNotFoundError>()(
   "EnsTextNotFoundError",
   {
     key: Schema.String,
@@ -25,7 +25,7 @@ export class EnsTextNotFoundError extends Schema.TaggedErrorClass<EnsTextNotFoun
   }
 ) {}
 
-export class EnsAvatarNotFoundError extends Schema.TaggedErrorClass<EnsAvatarNotFoundError>()(
+export class EnsAvatarNotFoundError extends Schema.TaggedError<EnsAvatarNotFoundError>()(
   "EnsAvatarNotFoundError",
   {
     message: Schema.String,
@@ -33,7 +33,7 @@ export class EnsAvatarNotFoundError extends Schema.TaggedErrorClass<EnsAvatarNot
   }
 ) {}
 
-export class EnsResolverNotConfiguredError extends Schema.TaggedErrorClass<EnsResolverNotConfiguredError>()(
+export class EnsResolverNotConfiguredError extends Schema.TaggedError<EnsResolverNotConfiguredError>()(
   "EnsResolverNotConfiguredError",
   {
     message: Schema.String,
@@ -41,7 +41,7 @@ export class EnsResolverNotConfiguredError extends Schema.TaggedErrorClass<EnsRe
   }
 ) {}
 
-export class EnsResolutionError extends Schema.TaggedErrorClass<EnsResolutionError>()(
+export class EnsResolutionError extends Schema.TaggedError<EnsResolutionError>()(
   "EnsResolutionError",
   {
     cause: Schema.optional(Schema.Unknown),

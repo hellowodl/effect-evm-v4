@@ -49,5 +49,5 @@ just type-check   # Type-check the package
 
 - Keep the public API intentional: avoid accidental exports; prefer exporting from `src/index.ts`.
 - Stick to Effect service patterns: `Context.Service` for services, `Layer.*` for implementations.
-- Use typed errors (`Schema.TaggedErrorClass`) and `Effect.catchTag` in examples.
+- Use typed errors (`Schema.TaggedError`) and `Effect.catchTag` in examples.
 - Prefer strict types; avoid `any` and use `unknown` when needed.

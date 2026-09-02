@@ -35,7 +35,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ### Changed
 
 - Rename the forked package from `@prb/effect-evm` to `effect-evm-v4`.
-- Port the EVM package from Effect v3 to Effect `4.0.0-beta.102` and adopt the corresponding v4 service, schema, stream,
+- Port the EVM package from Effect v3 to Effect `4.0.0-rc.112` and adopt the corresponding v4 service, schema, stream,
   cache, request, runtime, HTTP, scheduling, and testing APIs.
 - Update repository metadata and documentation for `hellowodl/effect-evm-v4`.
 

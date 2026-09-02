@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-export class BlockNotFoundError extends Schema.TaggedErrorClass<BlockNotFoundError>()(
+export class BlockNotFoundError extends Schema.TaggedError<BlockNotFoundError>()(
   "BlockNotFoundError",
   {
     blockIdentifier: Schema.String,
@@ -9,7 +9,7 @@ export class BlockNotFoundError extends Schema.TaggedErrorClass<BlockNotFoundErr
   }
 ) {}
 
-export class BlockTimeoutError extends Schema.TaggedErrorClass<BlockTimeoutError>()(
+export class BlockTimeoutError extends Schema.TaggedError<BlockTimeoutError>()(
   "BlockTimeoutError",
   {
     blockNumber: Schema.BigInt,

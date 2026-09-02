@@ -5,7 +5,7 @@ import { Schema } from "effect";
  * This can occur in SSR contexts, when storage is blocked by browser settings,
  * or when a SecurityError is thrown by the browser.
  */
-export class StorageUnavailableError extends Schema.TaggedErrorClass<StorageUnavailableError>()(
+export class StorageUnavailableError extends Schema.TaggedError<StorageUnavailableError>()(
   "StorageUnavailableError",
   {
     message: Schema.String,
@@ -16,7 +16,7 @@ export class StorageUnavailableError extends Schema.TaggedErrorClass<StorageUnav
  * Error thrown when storage quota is exceeded.
  * Occurs when attempting to store data beyond the browser's storage limit.
  */
-export class StorageQuotaExceededError extends Schema.TaggedErrorClass<StorageQuotaExceededError>()(
+export class StorageQuotaExceededError extends Schema.TaggedError<StorageQuotaExceededError>()(
   "StorageQuotaExceededError",
   {
     key: Schema.String,
@@ -28,7 +28,7 @@ export class StorageQuotaExceededError extends Schema.TaggedErrorClass<StorageQu
  * Error thrown when stored data cannot be decoded.
  * This can occur due to schema mismatches or data corruption.
  */
-export class StorageDecodeError extends Schema.TaggedErrorClass<StorageDecodeError>()(
+export class StorageDecodeError extends Schema.TaggedError<StorageDecodeError>()(
   "StorageDecodeError",
   {
     cause: Schema.Unknown,

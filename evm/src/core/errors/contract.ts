@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-export class ContractReadError extends Schema.TaggedErrorClass<ContractReadError>()(
+export class ContractReadError extends Schema.TaggedError<ContractReadError>()(
   "ContractReadError",
   {
     address: Schema.String,
@@ -10,7 +10,7 @@ export class ContractReadError extends Schema.TaggedErrorClass<ContractReadError
   }
 ) {}
 
-export class SimulationFailedError extends Schema.TaggedErrorClass<SimulationFailedError>()(
+export class SimulationFailedError extends Schema.TaggedError<SimulationFailedError>()(
   "SimulationFailedError",
   {
     address: Schema.String,
@@ -26,7 +26,7 @@ export class SimulationFailedError extends Schema.TaggedErrorClass<SimulationFai
   }
 ) {}
 
-export class GasEstimationError extends Schema.TaggedErrorClass<GasEstimationError>()(
+export class GasEstimationError extends Schema.TaggedError<GasEstimationError>()(
   "GasEstimationError",
   {
     address: Schema.String,
@@ -43,7 +43,7 @@ export class GasEstimationError extends Schema.TaggedErrorClass<GasEstimationErr
   }
 ) {}
 
-export class ContractWriteError extends Schema.TaggedErrorClass<ContractWriteError>()(
+export class ContractWriteError extends Schema.TaggedError<ContractWriteError>()(
   "ContractWriteError",
   {
     address: Schema.String,
@@ -56,7 +56,7 @@ export class ContractWriteError extends Schema.TaggedErrorClass<ContractWriteErr
   }
 ) {}
 
-export class MulticallError extends Schema.TaggedErrorClass<MulticallError>()("MulticallError", {
+export class MulticallError extends Schema.TaggedError<MulticallError>()("MulticallError", {
   cause: Schema.optional(Schema.Unknown),
   failedCalls: Schema.Number,
   message: Schema.String,

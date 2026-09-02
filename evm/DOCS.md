@@ -99,7 +99,7 @@ bun add effect-evm-v4
 
 **Peer dependencies**
 
-- `effect@^4.0.0-beta.102`
+- `effect@4.0.0-rc.112`
 - `viem@^2.43`
 - Optional: `@wagmi/core@>=2.0.0` (for `effect-evm-v4/wagmi`)
 - Optional: `react@>=18.2.0`, `react-dom@>=18.2.0` (for `effect-evm-v4/react-hooks`)
@@ -878,7 +878,7 @@ import { TEST_ADDRESS, TEST_ADDRESS_2, TEST_CHAIN_ID, TEST_TX_HASH, UNKNOWN_CHAI
 
 ## Errors
 
-Errors extend `Schema.TaggedErrorClass`; prefer `Effect.catchTag`.
+Errors extend `Schema.TaggedError`; prefer `Effect.catchTag`.
 
 ```typescript
 import { Effect } from "effect";

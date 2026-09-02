@@ -35,7 +35,7 @@ export type RouteMeshFallbackChainEntry = RouteMeshChainEntry & {
 
 // === Errors ===
 
-export class RouteMeshApiKeyMissingError extends Schema.TaggedErrorClass<RouteMeshApiKeyMissingError>()(
+export class RouteMeshApiKeyMissingError extends Schema.TaggedError<RouteMeshApiKeyMissingError>()(
   "RouteMeshApiKeyMissingError",
   {
     message: Schema.String,

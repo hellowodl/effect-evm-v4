@@ -40,13 +40,10 @@ export const CircuitBreakerConfigFromEnv = Config.all({
 /**
  * Error thrown when circuit breaker is open
  */
-export class CircuitOpenError extends Schema.TaggedErrorClass<CircuitOpenError>()(
-  "CircuitOpenError",
-  {
-    message: Schema.String,
-    openedAt: Schema.Number,
-  }
-) {}
+export class CircuitOpenError extends Schema.TaggedError<CircuitOpenError>()("CircuitOpenError", {
+  message: Schema.String,
+  openedAt: Schema.Number,
+}) {}
 
 /**
  * Internal state tracking for circuit breaker

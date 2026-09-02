@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-export class SignatureVerificationError extends Schema.TaggedErrorClass<SignatureVerificationError>()(
+export class SignatureVerificationError extends Schema.TaggedError<SignatureVerificationError>()(
   "SignatureVerificationError",
   {
     cause: Schema.optional(Schema.Unknown),
@@ -9,7 +9,7 @@ export class SignatureVerificationError extends Schema.TaggedErrorClass<Signatur
   }
 ) {}
 
-export class SignatureRecoveryError extends Schema.TaggedErrorClass<SignatureRecoveryError>()(
+export class SignatureRecoveryError extends Schema.TaggedError<SignatureRecoveryError>()(
   "SignatureRecoveryError",
   {
     cause: Schema.optional(Schema.Unknown),
@@ -18,7 +18,7 @@ export class SignatureRecoveryError extends Schema.TaggedErrorClass<SignatureRec
   }
 ) {}
 
-export class InvalidSignatureError extends Schema.TaggedErrorClass<InvalidSignatureError>()(
+export class InvalidSignatureError extends Schema.TaggedError<InvalidSignatureError>()(
   "InvalidSignatureError",
   {
     message: Schema.String,

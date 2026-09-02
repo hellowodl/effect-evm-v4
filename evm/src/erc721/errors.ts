@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-export class Erc721OwnerNotFoundError extends Schema.TaggedErrorClass<Erc721OwnerNotFoundError>()(
+export class Erc721OwnerNotFoundError extends Schema.TaggedError<Erc721OwnerNotFoundError>()(
   "Erc721OwnerNotFoundError",
   {
     address: Schema.String,
@@ -10,7 +10,7 @@ export class Erc721OwnerNotFoundError extends Schema.TaggedErrorClass<Erc721Owne
   }
 ) {}
 
-export class Erc721NoTokenURIError extends Schema.TaggedErrorClass<Erc721NoTokenURIError>()(
+export class Erc721NoTokenURIError extends Schema.TaggedError<Erc721NoTokenURIError>()(
   "Erc721NoTokenURIError",
   {
     address: Schema.String,
@@ -20,7 +20,7 @@ export class Erc721NoTokenURIError extends Schema.TaggedErrorClass<Erc721NoToken
   }
 ) {}
 
-export class Erc721MetadataFetchError extends Schema.TaggedErrorClass<Erc721MetadataFetchError>()(
+export class Erc721MetadataFetchError extends Schema.TaggedError<Erc721MetadataFetchError>()(
   "Erc721MetadataFetchError",
   {
     address: Schema.String,
@@ -32,7 +32,7 @@ export class Erc721MetadataFetchError extends Schema.TaggedErrorClass<Erc721Meta
   }
 ) {}
 
-export class Erc721TransferError extends Schema.TaggedErrorClass<Erc721TransferError>()(
+export class Erc721TransferError extends Schema.TaggedError<Erc721TransferError>()(
   "Erc721TransferError",
   {
     address: Schema.String,

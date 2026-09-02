@@ -5,27 +5,27 @@ import { isTaggedError } from "./predicates.js";
 
 export type TxReplacementReason = "cancelled" | "replaced" | "repriced";
 
-export class UserRejectedError extends Schema.TaggedErrorClass<UserRejectedError>()(
+export class UserRejectedError extends Schema.TaggedError<UserRejectedError>()(
   "UserRejectedError",
   {
     message: Schema.String,
   }
 ) {}
 
-export class TxFailedError extends Schema.TaggedErrorClass<TxFailedError>()("TxFailedError", {
+export class TxFailedError extends Schema.TaggedError<TxFailedError>()("TxFailedError", {
   cause: Schema.optional(Schema.Unknown),
   hash: Schema.String,
   message: Schema.String,
 }) {}
 
-export class TxReplacedError extends Schema.TaggedErrorClass<TxReplacedError>()("TxReplacedError", {
+export class TxReplacedError extends Schema.TaggedError<TxReplacedError>()("TxReplacedError", {
   message: Schema.String,
   newHash: Schema.String,
   oldHash: Schema.String,
   reason: Schema.Literals(["cancelled", "replaced", "repriced"]),
 }) {}
 
-export class ReceiptTimeoutError extends Schema.TaggedErrorClass<ReceiptTimeoutError>()(
+export class ReceiptTimeoutError extends Schema.TaggedError<ReceiptTimeoutError>()(
   "ReceiptTimeoutError",
   {
     hash: Schema.String,
@@ -34,7 +34,7 @@ export class ReceiptTimeoutError extends Schema.TaggedErrorClass<ReceiptTimeoutE
   }
 ) {}
 
-export class InsufficientFundsError extends Schema.TaggedErrorClass<InsufficientFundsError>()(
+export class InsufficientFundsError extends Schema.TaggedError<InsufficientFundsError>()(
   "InsufficientFundsError",
   {
     available: Schema.optional(Schema.String),
@@ -48,7 +48,7 @@ export type TransactionSubmissionReason = "raw-transaction-decoding";
 /**
  * Wallet/RPC submission failed before a transaction hash was returned.
  */
-export class TransactionSubmissionError extends Schema.TaggedErrorClass<TransactionSubmissionError>()(
+export class TransactionSubmissionError extends Schema.TaggedError<TransactionSubmissionError>()(
   "TransactionSubmissionError",
   {
     cause: Schema.optional(Schema.Unknown),
@@ -66,7 +66,7 @@ export class TransactionSubmissionError extends Schema.TaggedErrorClass<Transact
  *
  * This error is non-retryable: the transaction was never submitted to the network.
  */
-export class ResourceExhaustionError extends Schema.TaggedErrorClass<ResourceExhaustionError>()(
+export class ResourceExhaustionError extends Schema.TaggedError<ResourceExhaustionError>()(
   "ResourceExhaustionError",
   {
     cause: Schema.optional(Schema.Unknown),
