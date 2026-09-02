@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Common Changelog](https://common-changelog.org/).
 
+[0.2.0]: https://github.com/hellowodl/effect-evm-v4/releases/tag/evm%400.2.0
 [0.1.0]: https://github.com/hellowodl/effect-evm-v4/releases/tag/evm%400.1.0
 [1.0.0]: https://github.com/PaulRBerg/prb-effect/releases/tag/evm%401.0.0
 [1.0.1]: https://github.com/PaulRBerg/prb-effect/releases/tag/evm%401.0.1
@@ -29,6 +30,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 > Versions 1.0.0 through 3.0.0 are the historical releases of the upstream
 > [`@prb/effect-evm`](https://github.com/PaulRBerg/prb-effect/tree/main/evm) package. This fork starts its own version
 > history at 0.1.0.
+
+## [0.2.0] - 2026-09-01
+
+### Changed
+
+- Update Effect and `@effect/vitest` from `4.0.0-beta.102` to `4.0.0-rc.112`.
+- Migrate tagged errors to the Effect RC schema API.
 
 ## [0.1.0] - 2026-08-01
 

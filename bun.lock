@@ -21,7 +21,7 @@
     },
     "evm": {
       "name": "effect-evm-v4",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "devDependencies": {
         "@biomejs/biome": "^2.5.0",
         "@effect/vitest": "4.0.0-rc.112",
