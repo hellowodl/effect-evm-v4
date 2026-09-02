@@ -80,10 +80,16 @@
     }
   },
   "devEngines": {
-    "packageManager": {
-      "name": "bun",
-      "version": "1.4.0",
-      "onFail": "download"
-    }
+    "packageManager": [
+      {
+        "name": "bun",
+        "version": "1.4.0",
+        "onFail": "download"
+      },
+      {
+        "name": "npm",
+        "onFail": "ignore"
+      }
+    ]
   }
 }
