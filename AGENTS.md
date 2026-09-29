@@ -4,7 +4,7 @@ AI agents working on effect-evm-v4 MUST follow these guidelines.
 
 ## Tech Stack
 
-- **Effect**: Effect v4 (`4.0.0-rc.112`)
+- **Effect**: Effect v4 (`4.0.0-rc.117`)
 - **Language**: TypeScript v5.9+
 - **Package Manager**: Bun with workspace catalogs
 - **Task Runner**: Just

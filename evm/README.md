@@ -20,7 +20,7 @@ bun add effect-evm-v4
 
 **Peer dependencies**
 
-- `effect@4.0.0-rc.112`
+- `effect@4.0.0-rc.117`
 - `viem@^2.43`
 - Optional: `@wagmi/core@>=2.0.0` (for `effect-evm-v4/wagmi`)
 - Optional: `react@>=18.2.0`, `react-dom@>=18.2.0` (for `effect-evm-v4/react-hooks`)

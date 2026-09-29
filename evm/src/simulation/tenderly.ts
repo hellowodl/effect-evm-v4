@@ -97,9 +97,9 @@ type TenderlySimulationResponse = {
 
 const getTenderlyConfig = Effect.gen(function* () {
   const optional = yield* Config.all({
-    accessKey: Config.option(Config.string("TENDERLY_ACCESS_KEY")),
-    account: Config.option(Config.string("TENDERLY_ACCOUNT")),
-    project: Config.option(Config.string("TENDERLY_PROJECT")),
+    accessKey: Config.option(Config.String("TENDERLY_ACCESS_KEY")),
+    account: Config.option(Config.String("TENDERLY_ACCOUNT")),
+    project: Config.option(Config.String("TENDERLY_PROJECT")),
   }).pipe(
     Effect.mapError(
       () =>

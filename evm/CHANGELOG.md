@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Common Changelog](https://common-changelog.org/).
 
+[0.2.1]: https://github.com/hellowodl/effect-evm-v4/releases/tag/evm%400.2.1
 [0.2.0]: https://github.com/hellowodl/effect-evm-v4/releases/tag/evm%400.2.0
 [0.1.0]: https://github.com/hellowodl/effect-evm-v4/releases/tag/evm%400.1.0
 [1.0.0]: https://github.com/PaulRBerg/prb-effect/releases/tag/evm%401.0.0
@@ -30,6 +31,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 > Versions 1.0.0 through 3.0.0 are the historical releases of the upstream
 > [`@prb/effect-evm`](https://github.com/PaulRBerg/prb-effect/tree/main/evm) package. This fork starts its own version
 > history at 0.1.0.
+
+## [0.2.1] - 2026-09-28
+
+### Changed
+
+- Update Effect and `@effect/vitest` from `4.0.0-rc.112` to `4.0.0-rc.117`.
+- Migrate `Config.number`, `Config.boolean`, and `Config.string` to the capitalized Effect RC `Config` constructors.
+- Update dev tooling to vitest 5, which `@effect/vitest` `4.0.0-rc.117` requires.
 
 ## [0.2.0] - 2026-09-01
 
